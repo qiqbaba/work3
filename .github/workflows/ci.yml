@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 产物与源码一致性 / 静态校验
+        run: node build_single.js --check && node verify.js
+
+      - name: 安装测试依赖
+        run: npm install --no-audit --no-fund
+
+      - name: 安装 Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: 浏览器自检（129 项）
+        run: npm test
+
+      - name: 源码版与离线单文件版冒烟
+        run: npm run smoke
+
+      - name: 上传测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: .codebuddy/*.json

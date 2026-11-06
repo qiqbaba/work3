@@ -1,0 +1,29 @@
+    {
+      id: 'pdf-to-excel', name: 'PDF 转 Excel', cat: 'pdf', icon: 'grid', minFiles: 1, accept: '.pdf',
+      desc: '提取 PDF 表格文字，生成 Excel。',
+      keywords: '转Excel excel xlsx 表格 提取表格',
+      options: [],
+      async run(ctx) {
+        const out = [];
+        for (const file of ctx.files) {
+          ctx.progress(0, 1, `正在分析 ${file.name}…`);
+          const items = await pdfTextItems(file);
+          const byPage = {};
+          for (const it of items) (byPage[it.page] = byPage[it.page] || []).push(it);
+          const sheets = Object.keys(byPage).map(pn => {
+            const list = byPage[pn];
+            const rowYs = clusterIdx(list.map(i => i.y), 4);
+            const colXs = clusterIdx(list.map(i => i.x), 8);
+            const grid = rowYs.map(ry => {
+              const rowItems = list.filter(i => Math.abs(i.y - ry) <= 4);
+              return colXs.map(rx =>
+                rowItems.filter(i => Math.abs(i.x - rx) <= 8).sort((a, b) => a.x - b.x).map(i => i.str).join(' ').trim()
+              );
+            });
+            return { name: '第' + pn + '页', grid, colWidths: colXs.map(() => 90) };
+          });
+          out.push({ name: `${baseName(file.name)}.xlsx`, blob: await buildXlsxBlob(sheets), meta: sheets.length + ' 个工作表' });
+        }
+        return out;
+      }
+    },

@@ -1,0 +1,10 @@
+node_modules/
+*.new
+*.bak
+update.log
+config.json
+version.txt
+.codebuddy/*_probe.json
+.codebuddy/*_new.json
+.DS_Store
+Thumbs.db

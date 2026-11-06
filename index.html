@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>办公文件工具箱 - 离线 PDF 与图片处理</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="纯本地离线运行的办公文件工具箱：PDF 合并拆分、水印页码、压缩转换、安全净化、文档对比、图片处理等 79 项常用功能，并提供票据识别工作台，零文件上传保障隐私。">
+  <script>
+    (function () {
+      try {
+        var pref = localStorage.getItem('themePref') || localStorage.getItem('theme') || 'auto';
+        var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', pref === 'auto' ? (dark ? 'dark' : 'light') : pref);
+      } catch (e) { /* 存储不可用时保持浅色首帧 */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="./style.css">
+  <!-- Local Vendor Scripts -->
+  <script src="./lib/pdf.min.js"></script>
+  <script src="./lib/pdf-lib.min.js"></script>
+  <script src="./lib/jszip.min.js"></script>
+  <script src="./lib/jsqr.js"></script>
+</head>
+<body>
+
+  <a class="skip-link" href="#mainContent">跳到主要内容</a>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="container header-content">
+      <div class="brand-section">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        </span>
+        <h1 class="brand-title">办公文件工具箱</h1>
+      </div>
+      <nav class="header-nav" id="headerNav" aria-label="产品模块与工具分类">
+        <div class="header-filter-links" aria-label="工具分类">
+          <a href="#/home" data-cat="all" class="active">全部工具</a>
+          <a href="#/home" data-cat="pdf">PDF 处理</a>
+          <a href="#/home" data-cat="img">图片工具</a>
+        </div>
+        <a href="#/bill/bank" data-cat="bill" class="module-link" aria-label="打开票据识别工作台">票据识别</a>
+      </nav>
+      <div class="search-box" id="searchBox" role="search">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="search" id="toolSearch" placeholder="搜索工具，如：合并 / 水印 / 压缩" autocomplete="off" aria-label="搜索工具（Ctrl 或 Command + K）" aria-controls="toolGrid">
+        <kbd class="search-shortcut" aria-hidden="true">Ctrl K</kbd>
+        <button type="button" class="search-clear" id="searchClearBtn" title="清除搜索（Esc）" aria-label="清除搜索">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="header-actions">
+        <button id="themeToggleBtn" class="btn-theme" type="button" title="切换到深色模式" aria-label="切换到深色模式">
+          <svg class="icon icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <svg class="icon icon-sun" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <div class="container">
+
+      <!-- ============ HOME VIEW ============ -->
+      <div id="homeView" tabindex="-1">
+
+        <!-- 窄屏分类切换（桌面由头部导航承担） -->
+        <nav class="cat-chips" id="catChips" aria-label="工具分类切换">
+          <div class="cat-chip-filters">
+            <button type="button" class="cat-chip active" data-cat="all" aria-label="全部工具">全部</button>
+            <button type="button" class="cat-chip" data-cat="pdf" aria-label="PDF 处理">PDF</button>
+            <button type="button" class="cat-chip" data-cat="img" aria-label="图片工具">图片</button>
+          </div>
+          <button type="button" class="cat-chip cat-chip-module" data-cat="bill" aria-label="票据识别">票据</button>
+        </nav>
+
+        <!-- 最近使用 -->
+        <section class="quick-section" id="recentSection" hidden>
+          <div class="quick-header">
+            <h3 class="quick-title">最近使用</h3>
+            <button type="button" class="quick-clear" id="recentClearBtn">清空</button>
+          </div>
+          <div class="quick-row" id="recentRow"></div>
+        </section>
+
+        <!-- 自定义置顶 -->
+        <section class="quick-section" id="pinnedSection" hidden>
+          <div class="quick-header">
+            <h3 class="quick-title">置顶工具</h3>
+            <span class="quick-hint">拖动卡片可调整顺序</span>
+          </div>
+          <div class="quick-row" id="pinnedRow"></div>
+        </section>
+
+        <!-- Tool Card Grid -->
+        <p class="search-result-status" id="searchResultStatus" role="status" aria-live="polite" hidden></p>
+        <section class="tool-grid" id="toolGrid" aria-label="工具列表"></section>
+        <div class="empty-state" id="noResult" hidden>
+          <div class="empty-state-icon">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <p class="empty-state-title">没有找到匹配的工具</p>
+          <p class="empty-state-text">换个关键词试试。</p>
+          <div class="empty-state-chips">
+            <button type="button" class="empty-state-chip" data-suggest="合并">合并</button>
+            <button type="button" class="empty-state-chip" data-suggest="压缩">压缩</button>
+            <button type="button" class="empty-state-chip" data-suggest="水印">水印</button>
+            <button type="button" class="empty-state-chip" data-suggest="页码">页码</button>
+            <button type="button" class="empty-state-chip" data-suggest="图片">图片</button>
+          </div>
+        </div>
+
+        <!-- LAN Deployment Card (shown only when accessed over http/https) -->
+        <section class="card deploy-card" id="deploySection" style="display: none;" tabindex="-1" aria-label="一键安装到本机">
+          <div class="deploy-header">
+            <h3 class="deploy-title">一键安装到本机 · 离线使用</h3>
+            <span class="deploy-version" id="deployVersionLabel">服务器版本：检测中...</span>
+          </div>
+          <p class="deploy-desc">下载并运行 <code>install.bat</code>，即可安装到本机离线使用。</p>
+          <div class="deploy-features" aria-label="安装程序能力">
+            <div class="deploy-feature"><strong>一键安装</strong><span>下载后双击即可</span></div>
+            <div class="deploy-feature"><strong>离线可用</strong><span>装好后无需联网</span></div>
+            <div class="deploy-feature"><strong>自动更新</strong><span>联网时后台更新</span></div>
+          </div>
+          <details class="deploy-details">
+            <summary>安装说明</summary>
+            <p>下载后双击 install.bat，按提示完成即可。</p>
+          </details>
+          <div class="deploy-actions">
+            <button type="button" class="btn btn-primary" id="deployDetectBtn">检测并打开 / 安装本地版</button>
+            <button type="button" class="btn btn-secondary" id="deployDownloadBtn">仅下载安装程序 install.bat</button>
+          </div>
+          <p class="deploy-status" id="deployStatus">点击上方按钮检测或安装本地版。</p>
+        </section>
+
+
+      </div>
+
+      <!-- ============ WORKSPACE VIEW ============ -->
+      <div id="workspaceView" hidden>
+
+        <section class="ws-header">
+          <nav class="ws-crumbs" aria-label="当前位置">
+            <button type="button" id="wsBackBtn">
+              <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              工具列表
+            </button>
+            <span class="crumb-sep">/</span>
+            <span id="wsCrumbCat"></span>
+            <span class="crumb-sep">/</span>
+            <span class="crumb-current" id="wsCrumbName"></span>
+          </nav>
+          <div class="ws-title-row">
+            <span class="ws-icon" id="wsIcon"></span>
+            <div>
+              <h2 class="ws-title" id="wsTitle" tabindex="-1"></h2>
+              <p class="ws-desc" id="wsDesc"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="ws-cols" id="wsCols">
+            <div class="ws-col-files">
+              <div class="ws-col-head">
+                <h3 class="ws-col-title">选择文件</h3>
+                <div class="file-view-switch" role="group" aria-label="文件预览显示方式">
+                  <button type="button" class="file-view-btn active" id="fileViewListBtn" title="紧凑列表" aria-label="紧凑列表" aria-pressed="true">
+                    <svg class="icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                  </button>
+                  <button type="button" class="file-view-btn" id="fileViewGridBtn" title="放大缩略图" aria-label="放大缩略图" aria-pressed="false">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="dropzone" id="wsDropzone" tabindex="0" role="button" aria-label="选择文件">
+                <input type="file" id="wsFileInput" style="display: none;">
+                <div class="dropzone-icon">
+                  <svg class="icon icon-lg" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </div>
+                <p class="dropzone-text" id="wsDropzoneText">点击选择或拖拽文件到此处</p>
+                <p class="dropzone-hint" id="wsDropzoneHint"></p>
+              </div>
+              <div class="file-summary" id="wsFileSummary" hidden></div>
+              <div class="file-list" id="wsFileList"></div>
+            </div>
+            <div class="ws-col-options">
+              <h3 class="ws-col-title">处理选项</h3>
+              <form class="ws-options" id="wsOptions" novalidate aria-label="处理选项"></form>
+            </div>
+          </div>
+
+          <div class="progress-section" id="wsProgress" hidden>
+            <div class="progress-header">
+              <span id="wsProgressText" role="status" aria-live="polite">正在准备...</span>
+              <span class="progress-pct" id="wsProgressPct">0%</span>
+            </div>
+            <div class="progress-bar-bg" id="wsProgressBar" role="progressbar" aria-label="处理进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-bar-fill" id="wsProgressFill"></div>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button type="button" class="btn btn-primary" id="wsRunBtn" disabled>
+              <svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              开始处理
+            </button>
+            <button type="button" class="btn btn-secondary btn-cancel" id="wsCancelBtn" hidden>取消任务</button>
+            <button type="button" class="btn btn-ghost ws-view-results" id="wsViewResultsBtn" hidden>查看结果</button>
+            <span class="ws-run-hint" id="wsRunHint" role="status" aria-live="polite"></span>
+          </div>
+        </section>
+
+        <section class="results-section" id="wsResultsSection" tabindex="-1" aria-labelledby="wsResultsHeading" hidden>
+          <div class="results-header">
+            <div class="results-heading">
+              <h3 class="results-title" id="wsResultsHeading">处理结果（<span id="wsResultsCount">0</span>）</h3>
+              <span class="results-meta" id="wsResultsMeta"></span>
+            </div>
+            <div class="results-actions">
+              <button type="button" class="btn btn-secondary" id="wsZipBtn" disabled>
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                打包下载 ZIP
+              </button>
+            </div>
+          </div>
+          <div class="preview-grid" id="wsResultsGrid"></div>
+        </section>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ============ 票据识别工作台（按原项目四页 UI 迁移） ============ -->
+  <div id="billAppView" class="bill-app" hidden>
+    <aside class="bill-sidebar" aria-label="票据工作台导航">
+      <div class="bill-brand">
+        <div class="bill-brand-mark" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"></path><line x1="9" y1="7" x2="15" y2="7"></line><line x1="9" y1="11" x2="15" y2="11"></line></svg>
+        </div>
+        <div class="bill-brand-text"><strong>票据识别工具</strong><span>离线 Web 版</span></div>
+      </div>
+      <nav class="bill-nav" aria-label="票据功能">
+        <button class="bill-nav-item active" data-bill-page="bank" type="button" title="银行回单" aria-label="银行回单">
+          <span class="bill-nav-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"></path><line x1="9" y1="8" x2="15" y2="8"></line><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="13" y2="16"></line></svg></span>
+          <span class="bill-nav-item-label">银行回单</span>
+        </button>
+        <button class="bill-nav-item" data-bill-page="acceptance" type="button" title="承兑汇票" aria-label="承兑汇票">
+          <span class="bill-nav-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><circle cx="8" cy="12" r="2"></circle><line x1="13" y1="10" x2="18" y2="10"></line><line x1="13" y1="14" x2="18" y2="14"></line></svg></span>
+          <span class="bill-nav-item-label">承兑汇票</span>
+        </button>
+        <button class="bill-nav-item" data-bill-page="invoice" type="button" title="发票管理" aria-label="发票管理">
+          <span class="bill-nav-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line><line x1="9" y1="10" x2="9" y2="20"></line></svg></span>
+          <span class="bill-nav-item-label">发票管理</span>
+        </button>
+      </nav>
+      <div class="bill-sidebar-divider"></div>
+      <nav class="bill-nav" aria-label="系统">
+        <button class="bill-nav-item" data-bill-page="settings" type="button" title="系统设置" aria-label="系统设置">
+          <span class="bill-nav-icon"><svg class="icon" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></span>
+          <span class="bill-nav-item-label">系统设置</span>
+        </button>
+      </nav>
+      <div class="bill-sidebar-footer">
+        <button id="bill-config-chip" class="bill-config-chip" type="button" title="识别设置">● 本地模式</button>
+      </div>
+    </aside>
+
+    <main class="bill-main">
+      <header class="bill-topbar">
+        <div>
+          <h1 id="bill-page-title" tabindex="-1">银行回单识别</h1>
+          <p id="bill-page-subtitle">批量识别，自动汇总金额</p>
+        </div>
+        <div class="bill-topbar-actions">
+          <button id="billThemeToggleBtn" class="btn-theme bill-theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </button>
+          <button id="bill-back-btn" class="bill-btn bill-btn-ghost bill-btn-sm" type="button">返回工具箱</button>
+        </div>
+      </header>
+
+      <div class="bill-content">
+        <!-- 银行回单 -->
+        <section id="bill-page-bank" class="bill-page active">
+          <div class="bill-upload-grid">
+            <div class="bill-panel">
+              <div class="bill-dropzone" id="bill-bank-dropzone" role="button" tabindex="0">
+                <div class="bill-dropzone-icon"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+                <div class="bill-dropzone-title">点击选择票据文件</div>
+                <div class="bill-dropzone-hint">支持 PDF、OFD、图片，可多选</div>
+                <input type="file" id="bill-bank-file-input" multiple accept=".pdf,.ofd,.png,.jpg,.jpeg,.bmp,.tif,.tiff" hidden>
+              </div>
+              <div class="bill-file-chips" id="bill-bank-file-list"></div>
+            </div>
+            <div class="bill-panel bill-side-panel">
+              <div class="bill-panel-label">批量操作</div>
+              <div class="bill-action-grid">
+                <button id="bill-bank-recognize" class="bill-btn bill-btn-primary" type="button" disabled>开始识别</button>
+                <button id="bill-bank-stop" class="bill-btn bill-btn-ghost" type="button" disabled>停止</button>
+                <button id="bill-bank-export" class="bill-btn bill-btn-ghost" type="button" disabled>导出 Excel</button>
+                <button id="bill-bank-clear" class="bill-btn bill-btn-ghost" type="button" disabled>清空</button>
+              </div>
+              <div class="bill-progress" id="bill-bank-progress"><div id="bill-bank-progress-fill"></div></div>
+              <p class="bill-status-text" id="bill-bank-status">请选择票据文件</p>
+              <div class="bill-summary">
+                <div><span class="bill-summary-label">识别成功</span><strong id="bill-bank-summary-count">0 / 0</strong></div>
+                <div class="bill-align-right"><span class="bill-summary-label">合计金额</span><strong id="bill-bank-summary-amount">¥0.00</strong></div>
+              </div>
+              <details class="bill-advanced">
+                <summary>导入识别结果</summary>
+                <label class="bill-field">
+                  <textarea id="bill-bank-ocr-json" class="bill-input bill-textarea" rows="3" placeholder='粘贴识别结果 JSON'></textarea>
+                </label>
+                <p class="bill-ocr-source" id="bill-bank-ocr-source">本机识别</p>
+              </details>
+            </div>
+          </div>
+          <div class="bill-results-header">
+            <div class="bill-results-heading"><h2>识别结果</h2><span id="bill-bank-results-count">0 条</span></div>
+            <div class="bill-result-filters" id="bill-bank-filters" role="group" aria-label="筛选银行回单结果">
+              <button type="button" class="active" data-bill-filter="all" aria-pressed="true">全部</button>
+              <button type="button" data-bill-filter="success" aria-pressed="false">成功</button>
+              <button type="button" data-bill-filter="failed" aria-pressed="false">失败</button>
+            </div>
+          </div>
+          <div id="bill-bank-results" class="bill-results"></div>
+        </section>
+
+        <!-- 承兑汇票 -->
+        <section id="bill-page-acceptance" class="bill-page">
+          <div class="bill-upload-grid">
+            <div class="bill-panel">
+              <div class="bill-dropzone" id="bill-acceptance-dropzone" role="button" tabindex="0">
+                <div class="bill-dropzone-icon"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+                <div class="bill-dropzone-title">点击选择票据文件</div>
+                <div class="bill-dropzone-hint">支持 PDF、OFD、图片，可多选</div>
+                <input type="file" id="bill-acceptance-file-input" multiple accept=".pdf,.ofd,.png,.jpg,.jpeg,.bmp,.tif,.tiff" hidden>
+              </div>
+              <div class="bill-file-chips" id="bill-acceptance-file-list"></div>
+            </div>
+            <div class="bill-panel bill-side-panel">
+              <div class="bill-panel-label">批量操作</div>
+              <div class="bill-action-grid">
+                <button id="bill-acceptance-recognize" class="bill-btn bill-btn-primary" type="button" disabled>开始识别</button>
+                <button id="bill-acceptance-stop" class="bill-btn bill-btn-ghost" type="button" disabled>停止</button>
+                <button id="bill-acceptance-export" class="bill-btn bill-btn-ghost" type="button" disabled>导出 Excel</button>
+                <button id="bill-acceptance-clear" class="bill-btn bill-btn-ghost" type="button" disabled>清空</button>
+              </div>
+              <div class="bill-progress" id="bill-acceptance-progress"><div id="bill-acceptance-progress-fill"></div></div>
+              <p class="bill-status-text" id="bill-acceptance-status">请选择票据文件</p>
+              <div class="bill-summary">
+                <div><span class="bill-summary-label">识别成功</span><strong id="bill-acceptance-summary-count">0 / 0</strong></div>
+                <div class="bill-align-right"><span class="bill-summary-label">合计金额</span><strong id="bill-acceptance-summary-amount">¥0.00</strong></div>
+              </div>
+              <details class="bill-advanced">
+                <summary>导入识别结果</summary>
+                <label class="bill-field">
+                  <textarea id="bill-acceptance-ocr-json" class="bill-input bill-textarea" rows="3" placeholder='粘贴识别结果 JSON'></textarea>
+                </label>
+                <p class="bill-ocr-source" id="bill-acceptance-ocr-source">本机识别</p>
+              </details>
+            </div>
+          </div>
+          <div class="bill-results-header">
+            <div class="bill-results-heading"><h2>识别结果</h2><span id="bill-acceptance-results-count">0 条</span></div>
+            <div class="bill-result-filters" id="bill-acceptance-filters" role="group" aria-label="筛选承兑汇票结果">
+              <button type="button" class="active" data-bill-filter="all" aria-pressed="true">全部</button>
+              <button type="button" data-bill-filter="success" aria-pressed="false">成功</button>
+              <button type="button" data-bill-filter="failed" aria-pressed="false">失败</button>
+            </div>
+          </div>
+          <div id="bill-acceptance-results" class="bill-results"></div>
+        </section>
+
+        <!-- 发票管理 -->
+        <section id="bill-page-invoice" class="bill-page">
+          <div class="bill-panel bill-invoice-source-panel">
+            <div class="bill-panel-heading">
+              <div>
+                <span class="bill-step-label">步骤 1</span>
+                <h2>选择并识别发票</h2>
+                <p>文件仅在本机处理，不会上传。</p>
+              </div>
+              <div class="bill-privacy-badge">本地处理</div>
+            </div>
+            <div class="bill-row bill-folder-row">
+              <div class="bill-folder-path" id="bill-invoice-folder-path">尚未选择发票文件夹</div>
+              <button id="bill-invoice-pick-folder" class="bill-btn bill-btn-primary" type="button">选择文件夹</button>
+              <button id="bill-invoice-pick-files" class="bill-btn bill-btn-ghost" type="button">选择文件</button>
+              <label class="bill-checkbox"><input id="bill-invoice-include-sub" type="checkbox"> 包含子文件夹</label>
+              <button id="bill-invoice-rescan" class="bill-btn bill-btn-ghost" type="button" disabled>按当前选项重扫</button>
+              <input type="file" id="bill-invoice-folder-input" webkitdirectory directory multiple hidden>
+              <input type="file" id="bill-invoice-files-input" multiple accept=".pdf,.ofd,.png,.jpg,.jpeg,.bmp,.tif,.tiff" hidden>
+            </div>
+            <div class="bill-row bill-action-row">
+              <div class="bill-action-group">
+                <button id="bill-invoice-local-parse" class="bill-btn bill-btn-primary" type="button" disabled title="从本机文件提取发票信息">开始本地解析</button>
+                <button id="bill-invoice-recognize" class="bill-btn bill-btn-ghost" type="button" disabled title="使用已导入的识别结果">使用导入结果</button>
+                <button id="bill-invoice-stop" class="bill-btn bill-btn-ghost" type="button" disabled hidden>停止</button>
+              </div>
+            </div>
+            <div class="bill-action-status-block">
+              <span class="bill-status-text" id="bill-invoice-status" role="status" aria-live="polite">请选择发票文件夹</span>
+              <div class="bill-progress bill-status-progress" id="bill-invoice-progress"><div id="bill-invoice-progress-fill"></div></div>
+              <p class="bill-ocr-source" id="bill-invoice-ocr-source">本机识别</p>
+            </div>
+          </div>
+
+          <div class="bill-table-panel">
+            <div class="bill-table-heading">
+              <div>
+                <h2>发票列表</h2>
+                <span class="bill-table-hint">点击“详情”查看完整字段。</span>
+              </div>
+              <div class="bill-table-actions">
+                <button id="bill-invoice-merge" class="bill-btn bill-btn-ghost bill-btn-sm" type="button" disabled>合成 PDF</button>
+                <button id="bill-invoice-export" class="bill-btn bill-btn-ghost bill-btn-sm" type="button" disabled>导出 Excel</button>
+              </div>
+            </div>
+            <div class="bill-table-toolbar">
+              <label class="bill-search-field">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span class="sr-only">搜索发票</span>
+                <input id="bill-invoice-filter" class="bill-input" type="search" placeholder="搜索文件名、号码、购买方或销售方" autocomplete="off">
+              </label>
+              <select id="bill-invoice-status-filter" class="bill-input bill-small" aria-label="按识别状态筛选">
+                <option value="all">全部状态</option>
+                <option value="success">识别成功</option>
+                <option value="local">本地解析</option>
+                <option value="failed">失败 / 待处理</option>
+              </select>
+              <div class="bill-summary bill-inline-summary" id="bill-invoice-summary">文件 0 个 · 已识别 0 · 合计 ¥0.00</div>
+            </div>
+            <div class="bill-table-wrap">
+              <table class="bill-data-table"><thead><tr>
+                <th class="bill-col-index">#</th><th>原文件名</th><th>新文件名</th><th>类型</th><th>发票号码</th>
+                <th>开票日期</th><th class="bill-num">金额</th><th>购买方</th><th>销售方</th><th>状态</th><th>操作</th>
+              </tr></thead><tbody id="bill-invoice-table-body"></tbody></table>
+            </div>
+            <div id="bill-invoice-mobile-list" class="bill-mobile-invoice-list"></div>
+            <div id="bill-invoice-empty" class="bill-empty-state">选择文件夹后，这里会显示发票列表</div>
+          </div>
+
+          <details class="bill-panel bill-output-panel" id="bill-invoice-output-panel">
+            <summary class="bill-output-summary">
+              <div>
+                <span class="bill-step-label">步骤 2 · 可选</span>
+                <strong>排序与批量重命名</strong>
+                <span>按号码或金额排序，生成重命名副本。</span>
+              </div>
+              <span class="bill-output-toggle">展开设置</span>
+            </summary>
+            <div class="bill-output-body">
+              <div class="bill-sort-grid">
+                <label class="bill-field"><span>排序方式</span>
+                  <select id="bill-invoice-sort-mode" class="bill-input">
+                    <option value="custom">指定发票号码顺序</option>
+                    <option value="number_asc">发票号码 升序</option>
+                    <option value="number_desc">发票号码 降序</option>
+                    <option value="amount_asc">发票金额 升序</option>
+                    <option value="amount_desc">发票金额 降序</option>
+                    <option value="date_asc">开票日期 升序</option>
+                    <option value="date_desc">开票日期 降序</option>
+                    <option value="original">原文件名顺序</option>
+                  </select>
+                </label>
+                <div class="bill-field bill-grow"><span class="bill-field-head"><span>指定发票号码顺序（换行或逗号分隔）</span>
+                  <button id="bill-invoice-import-order" class="bill-link-btn" type="button">从 Excel 导入</button>
+                  <input type="file" id="bill-invoice-order-input" accept=".xlsx,.xls,.xlsm,.csv,.txt" hidden></span>
+                  <textarea id="bill-invoice-custom-order" class="bill-input bill-textarea" rows="2" placeholder="例如：26932000001715031706"></textarea>
+                </div>
+                <span class="bill-sort-auto-hint">选择或输入后自动排序</span>
+              </div>
+              <div class="bill-order-source-row">
+                <span>号码来源：</span><span id="bill-invoice-order-source">未导入 Excel</span>
+                <select id="bill-invoice-order-column" class="bill-input bill-small" hidden></select>
+              </div>
+              <div id="bill-invoice-sort-notice" class="bill-sort-notice" hidden>
+                <span class="bill-sort-notice-icon">i</span><span id="bill-invoice-sort-notice-text"></span>
+                <button id="bill-invoice-sort-notice-detail" class="bill-link-btn" type="button" hidden>查看明细</button>
+              </div>
+
+              <div class="bill-rename-grid">
+                <label class="bill-field"><span>前缀</span><input id="bill-invoice-prefix" class="bill-input" value="发票" placeholder="发票"></label>
+                <label class="bill-field"><span>起始序号</span><input id="bill-invoice-start" class="bill-input" type="number" min="0" value="1"></label>
+                <label class="bill-field"><span>序号位数</span>
+                  <select id="bill-invoice-digits" class="bill-input"><option value="2">2 位</option><option value="3" selected>3 位</option><option value="4">4 位</option><option value="5">5 位</option></select>
+                </label>
+                <label class="bill-field bill-template-field"><span class="bill-field-head"><span>文件名模板</span>
+                  <button id="bill-invoice-reset-template" class="bill-link-btn" type="button">恢复默认</button></span>
+                  <input id="bill-invoice-name-template" class="bill-input" value="{前缀}{序号}" placeholder="例如：{前缀}{序号}_{发票号码}">
+                </label>
+                <button id="bill-invoice-rename" class="bill-btn bill-btn-primary bill-align-end" type="button" disabled>生成重命名副本</button>
+              </div>
+              <div class="bill-template-row">
+                <span class="bill-template-label">插入字段</span>
+                <div id="bill-invoice-template-fields" class="bill-template-chips"></div>
+                <span class="bill-template-hint">点击字段插入模板</span>
+              </div>
+              <div class="bill-name-preview-line"><span>文件名预览：</span><span id="bill-invoice-name-preview">扫描发票后显示</span></div>
+            </div>
+          </details>
+        </section>
+
+        <!-- 系统设置 -->
+        <section id="bill-page-settings" class="bill-page">
+          <div class="bill-panel bill-settings-panel">
+            <div class="bill-panel-heading">
+              <div>
+                <h2>识别与界面设置</h2>
+                <p>默认在本机处理。</p>
+              </div>
+              <div class="bill-privacy-badge">不会上传文件</div>
+            </div>
+
+            <section class="bill-settings-section">
+              <h3>界面主题</h3>
+              <label class="bill-form-row bill-theme-setting"><span>主题模式</span>
+                <select id="themeModeSelect" class="bill-input">
+                  <option value="auto">跟随系统</option>
+                  <option value="light">始终浅色</option>
+                  <option value="dark">始终深色</option>
+                </select>
+              </label>
+            </section>
+
+            <section class="bill-settings-section">
+              <h3>导入识别结果</h3>
+              <label class="bill-form-row"><span>识别结果 JSON（可选）</span>
+                <textarea id="bill-ocr-json" class="bill-input bill-textarea" rows="5" placeholder='粘贴识别结果 JSON'></textarea></label>
+            </section>
+
+            <details class="bill-settings-section bill-cloud-settings">
+              <summary>云端 OCR 密钥（可选）</summary>
+              <label class="bill-form-row"><span>SecretId</span><input id="bill-secret-id" class="bill-input" autocomplete="off" placeholder="AKID..."></label>
+              <label class="bill-form-row"><span>SecretKey</span><span class="bill-input-with-btn">
+                <input id="bill-secret-key" class="bill-input" type="password" autocomplete="off" placeholder="请输入 SecretKey">
+                <button id="bill-toggle-secret" class="bill-btn bill-btn-ghost bill-btn-sm" type="button" aria-controls="bill-secret-key" aria-pressed="false">显示</button></span></label>
+              <div class="bill-form-actions">
+                <button id="bill-save-config" class="bill-btn bill-btn-primary" type="button">保存密钥</button>
+                <button id="bill-clear-config" class="bill-btn bill-btn-ghost" type="button">清除密钥</button>
+                <span id="bill-config-state-text" class="bill-status-text">本地模式</span>
+              </div>
+            </details>
+
+            <section class="bill-settings-section">
+              <h3>本机数据</h3>
+              <button id="bill-invoice-clear-cache" class="bill-btn bill-btn-ghost bill-btn-sm" type="button">清空识别缓存</button>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div id="bill-modal-confirm" class="bill-modal" role="dialog" aria-modal="true" aria-labelledby="bill-confirm-title" aria-describedby="bill-confirm-message" hidden>
+      <div class="bill-modal-backdrop" data-bill-confirm-close="1"></div>
+      <div class="bill-modal-card">
+        <h3 id="bill-confirm-title">确认操作</h3>
+        <p id="bill-confirm-message" class="bill-modal-text"></p>
+        <div class="bill-modal-actions">
+          <button id="bill-confirm-cancel" class="bill-btn bill-btn-ghost" type="button">取消</button>
+          <button id="bill-confirm-ok" class="bill-btn bill-btn-primary" type="button">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="bill-modal-detail" class="bill-modal" role="dialog" aria-modal="true" aria-labelledby="bill-detail-title" hidden>
+      <div class="bill-modal-backdrop" data-bill-detail-close="1"></div>
+      <div class="bill-modal-card bill-modal-wide">
+        <div class="bill-modal-head"><h3 id="bill-detail-title">识别详情</h3>
+          <button id="bill-detail-close" class="bill-icon-btn" type="button" aria-label="关闭识别详情">×</button></div>
+        <div id="bill-detail-body" class="bill-detail-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件内容预览弹层（图片大图 / PDF 逐页） -->
+  <div class="lightbox-modal" id="lightboxModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="lightbox-content">
+      <div class="lightbox-toolbar" id="lightboxToolbar" hidden>
+        <span class="lightbox-title" id="lightboxTitle"></span>
+        <div class="lightbox-pager" id="lightboxPager" hidden>
+          <button type="button" class="lightbox-nav" id="lightboxPrevBtn" title="上一页" aria-label="上一页">
+            <svg class="icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <span class="lightbox-page-info" id="lightboxPageInfo">1 / 1</span>
+          <button type="button" class="lightbox-nav" id="lightboxNextBtn" title="下一页" aria-label="下一页">
+            <svg class="icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+        <button type="button" class="lightbox-close" id="lightboxCloseBtn" title="关闭查看（Esc）" aria-label="关闭查看">
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="lightbox-stage" id="lightboxStage">
+        <img id="lightboxImg" src="" alt="文件内容预览">
+        <div class="lightbox-document-wrap" id="lightboxDocumentWrap" hidden>
+          <iframe id="lightboxDocument" class="lightbox-document" title="HTML 报告内容" sandbox=""></iframe>
+          <pre id="lightboxText" class="lightbox-text" tabindex="0" hidden></pre>
+        </div>
+        <p class="lightbox-status" id="lightboxStatus" hidden></p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Application Logic -->
+  <script src="./app.js"></script>
+
+  <!-- LAN Deployment Logic (active only when served over http/https) -->
+  <script>
+    (function () {
+      'use strict';
+      var deploySection = document.getElementById('deploySection');
+      var deployVersionLabel = document.getElementById('deployVersionLabel');
+      var deployDetectBtn = document.getElementById('deployDetectBtn');
+      var deployDownloadBtn = document.getElementById('deployDownloadBtn');
+      var deployStatus = document.getElementById('deployStatus');
+      if (!deploySection) return;
+
+      deploySection.style.display = '';
+
+      var PROMPT_KEY = 'officetoolbox.installPrompt';
+      function getDecision() {
+        try { return localStorage.getItem(PROMPT_KEY) || ''; } catch (e) { return ''; }
+      }
+      function setDecision(value) {
+        try { localStorage.setItem(PROMPT_KEY, value); } catch (e) { /* 存储不可用时仅本次会话有效 */ }
+      }
+
+      // 顶部常驻入口由本脚本注入；离线单文件版移除本脚本后不会出现无效按钮。
+      var headerActions = document.querySelector('.header-actions');
+      var headerInstallBtn = document.createElement('button');
+      headerInstallBtn.type = 'button';
+      headerInstallBtn.id = 'headerInstallBtn';
+      headerInstallBtn.className = 'btn-install';
+      headerInstallBtn.title = '安装到本机，离线使用';
+      headerInstallBtn.setAttribute('aria-label', '安装到本机，离线使用');
+      headerInstallBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M4 17v3h16v-3"></path></svg><span class="btn-install-label">安装到本机</span>';
+      if (headerActions) headerActions.insertBefore(headerInstallBtn, headerActions.firstChild);
+      headerInstallBtn.addEventListener('click', openInstallPrompt);
+
+      function showDeployCard() {
+        var details = deploySection.querySelector('.deploy-details');
+        if (details) details.open = true;
+        deploySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        deploySection.classList.add('is-highlighted');
+        try { deploySection.focus({ preventScroll: true }); } catch (e) { }
+        setTimeout(function () { deploySection.classList.remove('is-highlighted'); }, 1800);
+      }
+
+      // 首次安装必须先询问，任何自动流程都不得直接下载安装程序。
+      var installPrompt = null;
+      var lastFocused = null;
+
+      function openInstallPrompt() {
+        if (!installPrompt) { showDeployCard(); return; }
+        lastFocused = document.activeElement;
+        installPrompt.hidden = false;
+        var confirmBtn = document.getElementById('installPromptConfirm');
+        if (confirmBtn) confirmBtn.focus({ preventScroll: true });
+      }
+
+      function closeInstallPrompt() {
+        if (!installPrompt || installPrompt.hidden) return;
+        setDecision(getDecision() || 'later');
+        installPrompt.hidden = true;
+        if (lastFocused && lastFocused.focus) lastFocused.focus({ preventScroll: true });
+      }
+
+      function buildInstallPrompt() {
+        var wrap = document.createElement('div');
+        wrap.className = 'install-prompt';
+        wrap.id = 'installPrompt';
+        wrap.setAttribute('role', 'dialog');
+        wrap.setAttribute('aria-modal', 'true');
+        wrap.setAttribute('aria-labelledby', 'installPromptTitle');
+        wrap.hidden = true;
+        wrap.innerHTML = [
+          '<div class="install-prompt-backdrop" data-prompt-close="1"></div>',
+          '<div class="install-prompt-card">',
+          '<button type="button" class="install-prompt-close" data-prompt-close="1" aria-label="关闭询问">×</button>',
+          '<h3 id="installPromptTitle">要安装到本机吗？</h3>',
+          '<p class="install-prompt-desc">下载并运行 install.bat，即可安装到本机离线使用。</p>',
+          '<p class="install-prompt-status" id="installPromptStatus" role="status" hidden></p>',
+          '<div class="install-prompt-actions">',
+          '<button type="button" class="btn btn-ghost" id="installPromptLater">暂不安装</button>',
+          '<button type="button" class="btn btn-secondary" id="installPromptOpenLocal">已安装，直接打开</button>',
+          '<button type="button" class="btn btn-primary" id="installPromptConfirm">下载安装程序</button>',
+          '</div>',
+          '<button type="button" class="install-prompt-link" id="installPromptDetails">查看安装说明</button>',
+          '</div>'
+        ].join('');
+        document.body.appendChild(wrap);
+        return wrap;
+      }
+
+      // 以 file:// 打开时仍展示功能说明，但明确提示需要局域网服务。
+      if (location.protocol !== 'http:' && location.protocol !== 'https:') {
+        deployVersionLabel.textContent = '当前为本地文件方式打开';
+        deployDetectBtn.disabled = true;
+        deployDownloadBtn.disabled = true;
+        deployStatus.textContent = '请用服务器地址访问本页后再安装。';
+        return;
+      }
+
+      fetch('./version.json?t=' + Date.now())
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (v) {
+          var day = v.updated ? String(v.updated).slice(0, 10) : '';
+          deployVersionLabel.textContent = day ? ('服务器版本：' + day) : '服务器版本：已连接';
+        })
+        .catch(function () {
+          deployVersionLabel.textContent = '服务器版本：无法获取';
+        });
+
+      function downloadInstaller() {
+        return fetch('./install.bat?t=' + Date.now())
+          .then(function (r) {
+            if (!r.ok) throw new Error('install.bat not found');
+            return r.text();
+          })
+          .then(function (text) {
+            var bat = text.split('http://REPLACE_ME:8000').join(location.origin);
+            var blob = new Blob([bat], { type: 'text/plain;charset=utf-8' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'install.bat';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function () {
+              URL.revokeObjectURL(a.href);
+              a.remove();
+            }, 1000);
+          });
+      }
+
+      function probeLocalApp(onResult) {
+        var done = false;
+        var frames = [];
+        var finish = function (launched) {
+          if (done) return;
+          done = true;
+          window.removeEventListener('blur', onBlur);
+          frames.forEach(function (frame) {
+            if (frame.parentNode) frame.parentNode.removeChild(frame);
+          });
+          onResult(launched);
+        };
+        var onBlur = function () { finish(true); };
+        window.addEventListener('blur', onBlur);
+        // 旧版安装注册的是 pdf2png://，同时探测两种协议可兼容此前安装的客户端。
+        ['officetoolbox://open', 'pdf2png://open'].forEach(function (url) {
+          var frame = document.createElement('iframe');
+          frame.style.display = 'none';
+          frame.src = url;
+          document.body.appendChild(frame);
+          frames.push(frame);
+        });
+        setTimeout(function () { finish(false); }, 1500);
+      }
+
+      installPrompt = buildInstallPrompt();
+      var promptStatus = document.getElementById('installPromptStatus');
+      var promptLaterBtn = document.getElementById('installPromptLater');
+      var promptConfirmBtn = document.getElementById('installPromptConfirm');
+      var promptOpenLocalBtn = document.getElementById('installPromptOpenLocal');
+
+      function setPromptStatus(text, isError) {
+        promptStatus.textContent = text;
+        promptStatus.hidden = false;
+        promptStatus.className = 'install-prompt-status' + (isError ? ' is-error' : '');
+      }
+
+      function runInstall() {
+        setDecision('accepted');
+        setPromptStatus('正在下载…');
+        downloadInstaller().then(function () {
+          var msg = '已下载 install.bat，双击运行即可。';
+          setPromptStatus(msg);
+          deployStatus.textContent = msg;
+          promptConfirmBtn.textContent = '重新下载安装程序';
+          promptLaterBtn.textContent = '关闭';
+        }).catch(function () {
+          var err = '下载失败，请稍后重试。';
+          setPromptStatus(err, true);
+          deployStatus.textContent = err;
+        });
+      }
+
+      promptConfirmBtn.addEventListener('click', runInstall);
+      promptLaterBtn.addEventListener('click', function () {
+        closeInstallPrompt();
+        deployStatus.textContent = '已暂不安装，可从右上角重新打开。';
+      });
+      promptOpenLocalBtn.addEventListener('click', function () {
+        setPromptStatus('正在检测…');
+        probeLocalApp(function (launched) {
+          if (launched) {
+            setDecision('installed');
+            installPrompt.hidden = true;
+            deployStatus.textContent = '已打开本地版。';
+          } else {
+            setPromptStatus('未检测到本地版，请先安装。', true);
+          }
+        });
+      });
+      document.getElementById('installPromptDetails').addEventListener('click', function () {
+        closeInstallPrompt();
+        showDeployCard();
+      });
+      installPrompt.addEventListener('click', function (e) {
+        if (e.target && e.target.getAttribute('data-prompt-close')) closeInstallPrompt();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !installPrompt.hidden) closeInstallPrompt();
+      });
+
+      deployDetectBtn.addEventListener('click', function () {
+        deployDetectBtn.disabled = true;
+        deployDownloadBtn.disabled = true;
+        deployStatus.textContent = '正在检测…';
+        probeLocalApp(function (launched) {
+          deployDetectBtn.disabled = false;
+          deployDownloadBtn.disabled = false;
+          if (launched) {
+            setDecision('installed');
+            deployStatus.textContent = '已打开本地版。';
+          } else {
+            deployStatus.textContent = '未检测到本地版，请确认是否安装。';
+            openInstallPrompt();
+          }
+        });
+      });
+
+      deployDownloadBtn.addEventListener('click', function () {
+        setDecision('accepted');
+        deployStatus.textContent = '正在下载…';
+        downloadInstaller().then(function () {
+          deployStatus.textContent = '已下载 install.bat，双击运行即可。';
+        }).catch(function () {
+          deployStatus.textContent = '下载失败，请稍后重试。';
+        });
+      });
+
+      // 首次访问只弹窗询问，绝不自动下载；用户做出选择后不再重复打扰。
+      if (!getDecision() && !window.__ENABLE_TEST_HOOKS__ && !navigator.webdriver) {
+        setTimeout(function () {
+          if (!getDecision() && installPrompt.hidden) openInstallPrompt();
+        }, 900);
+      }
+    })();
+  </script>
+</body>
+</html>

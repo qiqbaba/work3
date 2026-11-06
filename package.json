@@ -1,0 +1,22 @@
+{
+  "name": "office-toolbox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "纯本地离线运行的办公文件工具箱：79 项 PDF / 图片 / Office 处理工具与票据识别工作台",
+  "scripts": {
+    "start": "node server.js",
+    "serve": "node server.js --no-watch",
+    "build": "node build_single.js",
+    "verify": "node verify.js",
+    "check": "node build_single.js --check && node verify.js",
+    "test": "node .codebuddy/run_selftest.mjs selftest.html selftest-results.json",
+    "smoke": "node .codebuddy/run_selftest.mjs index.html smoke-index.json && node .codebuddy/run_selftest.mjs office-toolbox-offline.html smoke-single.json",
+    "test:e2e": "node .codebuddy/run_bill_e2e.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}
