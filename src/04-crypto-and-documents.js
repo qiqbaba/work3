@@ -311,7 +311,12 @@
   function aesPkcs7Unpad(data) {
     if (!data.length) return data;
     const pad = data[data.length - 1];
-    if (pad < 1 || pad > 16) return data;
+    // 只判断长度不够：末字节恰好在 1..16 的损坏数据会被静默截掉一段。
+    // 必须全部 pad 个字节都等于 pad 才是合法 PKCS#7 填充，否则原样返回。
+    if (pad < 1 || pad > 16 || pad > data.length) return data;
+    for (let i = data.length - pad; i < data.length; i++) {
+      if (data[i] !== pad) return data;
+    }
     return data.subarray(0, data.length - pad);
   }
 
@@ -519,7 +524,9 @@
       if (skipObjs.has(obj)) continue;
       const idnum = typeof ref.objectNumber === 'number' ? ref.objectNumber : Number(String(ref).split(' ')[0]);
       const gen = typeof ref.generationNumber === 'number' ? ref.generationNumber : Number(String(ref).split(' ')[1]) || 0;
-      transform(obj, idnum, gen, 0);
+      // 字符串分支返回新对象，必须写回 context；字典/数组/流是原地修改。
+      const transformed = transform(obj, idnum, gen, 0);
+      if (transformed !== obj) doc.context.assign(ref, transformed);
     }
   }
   function pdfEncryptDoc(doc, userPwd) {
@@ -549,7 +556,11 @@
 
   /* ---- Office 格式：docx / xlsx 生成与解析、pptx 解析 ---- */
   function xmlEsc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    // XML 1.0 不允许大部分控制字符；PDF 文本层或文件名带入时会生成打不开的 Office 文件。
+    return String(s)
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
   }
   function buildDocxBlob(pages) {
     const zip = new JSZip();

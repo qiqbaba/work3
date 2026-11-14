@@ -92,11 +92,39 @@
     try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
   }
   function formatBytes(bytes) {
+    // 缺 size / NaN / 负数时不能让 Math.log 产生 "NaN undefined" 显示在界面上。
+    if (!Number.isFinite(bytes) || bytes < 0) return '—';
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // CSV 网格解析：引号字段内允许出现分隔符和换行（Excel 导出的备注、地址常见）。
+  // 若先按换行 split 再逐行解析，一条逻辑记录会被拆成多行，导致列数错乱。
+  function parseCsvGrid(text, separators) {
+    const seps = separators || ',';
+    const s = String(text == null ? '' : text).replace(/^\ufeff/, '');
+    const rows = [];
+    let row = [], cur = '', inQ = false;
+    const endRow = () => { row.push(cur); rows.push(row); row = []; cur = ''; };
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (inQ) {
+        if (ch === '"') {
+          if (s[i + 1] === '"') { cur += '"'; i++; }
+          else inQ = false;
+        } else cur += ch;
+      } else if (ch === '"') inQ = true;
+      else if (seps.indexOf(ch) >= 0) { row.push(cur); cur = ''; }
+      else if (ch === '\r' || ch === '\n') {
+        if (ch === '\r' && s[i + 1] === '\n') i++;
+        endRow();
+      } else cur += ch;
+    }
+    if (row.length || cur !== '') endRow();
+    return rows;
   }
 
   // 页面范围解析："1-3, 5" -> [1,2,3,5]；"1-3;4-6;7" -> 分组
@@ -109,17 +137,24 @@
       part = part.trim();
       if (!part) continue;
       if (part.includes('-')) {
-        const [a, b] = part.split('-');
-        const rawFrom = parseInt(a, 10), rawTo = parseInt(b, 10);
-        if (Number.isFinite(rawFrom) && Number.isFinite(rawTo) && rawFrom > rawTo) {
-          throw new Error(`页面范围无效：${part}（起始页不能大于结束页）`);
+        // 范围形式必须与单页形式一样拒绝越界 / 非法输入；此前 clamp 会静默处理
+        // 错误的页面（如 5 页文档输入 "99-100" 会得到第 5 页，"-" 会得到全部页）。
+        const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+        const from = m ? Number(m[1]) : NaN;
+        const to = m ? Number(m[2]) : NaN;
+        if (!m || from < 1 || to > maxPages || from > to) {
+          throw new Error(`页面范围无效：${part}（文档共 ${maxPages} 页）`);
         }
-        const from = Math.max(1, Math.min(rawFrom || 1, maxPages));
-        const to = Math.min(maxPages, Math.max(rawTo || maxPages, 1));
         for (let i = from; i <= to; i++) pages.add(i);
       } else {
-        const n = parseInt(part, 10);
-        if (!isNaN(n) && n >= 1 && n <= maxPages) pages.add(n);
+        // 单页形式也要拒绝非法 / 越界页码：旧实现用 parseInt 静默丢弃，
+        // "1,99" 会只处理第 1 页而不提示，"2abc" 会被当成第 2 页。
+        const m = part.match(/^(\d+)$/);
+        const n = m ? Number(m[1]) : NaN;
+        if (!m || n < 1 || n > maxPages) {
+          throw new Error(`页面范围无效：${part}（文档共 ${maxPages} 页）`);
+        }
+        pages.add(n);
       }
     }
     const sorted = Array.from(pages).sort((a, b) => a - b);
@@ -129,7 +164,7 @@
 
   // 多组范围解析："1-3; 4-6; 7" -> [[1,2,3],[4,5,6],[7]]
   function parseRangeGroups(rangeStr, maxPages) {
-    return rangeStr.split(/[;；]/)
+    return String(rangeStr == null ? '' : rangeStr).split(/[;；]/)
       .map(g => g.trim())
       .filter(Boolean)
       .map(g => parsePageRanges(g, maxPages))

@@ -14,9 +14,12 @@
       const ok = tokens.some(tok => {
         if (tok === '*') return true;
         if (tok === 'image/*') return /^image\//.test(f.type) || isImageFileName(nameLc);
-        if (tok === '.pdf') return /\.pdf$/.test(nameLc);
         if (tok.charAt(0) === '.') return nameLc.endsWith(tok);
-        return true;
+        // 未知 token 不能无条件放行（会让类型校验形同虚设），
+        // 标准 MIME 写法按文件实际 type 精确匹配或按前缀匹配。
+        const mime = (f.type || '').toLowerCase();
+        if (tok.endsWith('/*')) return mime.startsWith(tok.slice(0, -1));
+        return mime === tok;
       });
       if (!ok) {
         reportError(`文件类型不支持：${f.name}`);

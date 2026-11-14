@@ -20,7 +20,8 @@
           const ph = useA4 ? A4[1] : ih + margin * 2;
           const page = doc.addPage([pw, ph]);
           const availW = pw - margin * 2, availH = ph - margin * 2;
-          const s = Math.min(availW / iw, availH / ih, 1);
+          // 「自适应」应等比铺满可用区域；限制缩放不超过 1 会让小图只占 A4 一角。
+          const s = Math.min(availW / iw, availH / ih);
           const w = iw * s, h = ih * s;
           page.drawImage(img, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
         }

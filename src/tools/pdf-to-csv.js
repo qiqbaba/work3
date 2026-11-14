@@ -12,8 +12,13 @@
           for (const it of items) (byPage[it.page] = byPage[it.page] || []).push(it);
           const esc = v => {
             const s = String(v == null ? '' : v);
-            return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
           };
+          // 无文本层（扫描件）时 parts 为空，只会导出一个仅含 BOM 的空文件，
+          // 与 PDF 转 Excel 一致地报错，避免用户误以为转换成功。
+          if (!Object.keys(byPage).length) {
+            throw new Error(`${file.name} 未提取到可转换的文本，扫描件请先进行文字识别`);
+          }
           const parts = [];
           Object.keys(byPage).forEach((pn, idx) => {
             const list = byPage[pn];

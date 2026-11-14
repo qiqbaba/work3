@@ -435,10 +435,11 @@
       if (!/金额|Total|小计|合计|票面/.test(billText(name))) return billText(val);
       if (/大写/.test(billText(name))) {
         const n = billCnAmountToFloat(val);
-        if (n > 0) { cnAmount = n; hasCn = true; }
+        // 红字发票 / 退款为负数金额，同样要识别；只排除 0 与非法值。
+        if (Number.isFinite(n) && n !== 0) { cnAmount = n; hasCn = true; }
       } else {
         const n = billCleanAmount(val);
-        if (n > 0) {
+        if (Number.isFinite(n) && n !== 0) {
           const corrected = isAcceptance ? n / 100 : n;
           numAmount = corrected; hasNum = true;
           return billFormatAmount(corrected);
@@ -704,7 +705,8 @@
     let rec = billEmptyRecord(file);
     if (o.useCache !== false) {
       const hit = billCacheGet(file);
-      if (hit) return { ...rec, ...hit, file, path: file.name, file_name: file.name, from_cache: true };
+      // 本次导入了 OCR 结果时必须重新解析合并，不能让缓存把新结果挡在门外。
+      if (hit && !o.ocrData) return { ...rec, ...hit, file, path: file.name, file_name: file.name, from_cache: true };
     }
     const filenameNumber = billApplyFilenameNumber(rec);
     const ext = billExt(file.name);
@@ -1034,22 +1036,7 @@
       // Excel 导出的 CSV 常带 UTF-8 BOM，备注字段也可能含逗号/引号；
       // 简单 split 会吞掉首个号码或把一列拆成两列，导致候选列识别错乱。
       const text = (await file.text()).replace(/^\ufeff/, '');
-      const grid = text.split(/\r?\n/).map(line => {
-        const cells = [];
-        let cur = '', inQ = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (inQ) {
-            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-            else if (ch === '"') inQ = false;
-            else cur += ch;
-          } else if (ch === '"') inQ = true;
-          else if (/[,;\t，]/.test(ch)) { cells.push(cur.trim()); cur = ''; }
-          else cur += ch;
-        }
-        cells.push(cur.trim());
-        return cells;
-      });
+      const grid = parseCsvGrid(text, ',;\t，').map(cells => cells.map(cell => cell.trim()));
       return [{ name: baseName(file.name), grid }];
     }
     if (/\.xls$/.test(name)) {

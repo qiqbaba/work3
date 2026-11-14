@@ -24,9 +24,12 @@
               if (objId == null || seen.has(objId)) continue;
               seen.add(objId);
               let imgData = null;
-              try { imgData = page.objs.get(objId); } catch (e) {
-                try { imgData = await new Promise(r => page.objs.get(objId, r)); } catch (e2) { /* skip */ }
-              }
+              try {
+                imgData = page.objs.get(objId);
+                // pdf.js 对尚未解析的对象返回 null 而不抛异常，必须走回调等待，
+                // 原来的 catch 分支永远进不去，这类图片会被静默跳过。
+                if (!imgData) imgData = await new Promise(resolve => page.objs.get(objId, resolve));
+              } catch (e) { /* skip broken image */ }
               if (!imgData) continue;
               let canvas = null;
               try {

@@ -57,7 +57,8 @@
             mime = /^image\//.test(f.type) ? f.type : (detectImageMime(bytes) || 'application/octet-stream');
           }
           let b64 = bytesToBase64(bytes);
-          if (wrap > 0) b64 = b64.replace(new RegExp(`(.{${wrap}})`, 'g'), '$1\n');
+          // 用分段切分代替替换，长度为 wrap 整数倍时不会多出一个尾随空行。
+          if (wrap > 0) b64 = (b64.match(new RegExp(`.{1,${wrap}}`, 'g')) || []).join('\n');
           const text = (ctx.get('dataUrl') ? `data:${mime};base64,` : '') + b64;
           out.push({
             name: `${baseName(f.name)}_base64.txt`,

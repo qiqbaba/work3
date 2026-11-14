@@ -23,6 +23,8 @@
             });
             return { name: '第' + pn + '页', grid, colWidths: colXs.map(() => 90) };
           });
+          // 无文本层（扫描件）时 sheets 为空，会生成不含任何 worksheet 的非法 xlsx。
+          if (!sheets.length) throw new Error(`${file.name} 未提取到可转换的文本，扫描件请先进行文字识别`);
           out.push({ name: `${baseName(file.name)}.xlsx`, blob: await buildXlsxBlob(sheets), meta: sheets.length + ' 个工作表' });
         }
         return out;

@@ -131,11 +131,20 @@ function checkRelease() {
   if (!fs.readFileSync(path.join(ROOT, 'install.bat'), 'utf8').includes(PLACEHOLDER)) {
     throw new Error('install.bat 缺少服务器地址占位符，网页无法注入本机地址');
   }
+  const sha256 = buf => crypto.createHash('sha256').update(buf).digest('hex');
   const v = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
   const payload = fs.readFileSync(path.join(ROOT, 'office-toolbox-offline.html'));
-  const hash = crypto.createHash('sha256').update(payload).digest('hex');
-  if (hash !== v.sha256 || payload.length !== v.size) {
+  if (sha256(payload) !== v.sha256 || payload.length !== v.size) {
     throw new Error('version.json 与离线版哈希/大小不一致，请先运行 node build_single.js');
+  }
+  // 客户端 install.bat 会逐项核对清单里的脚本哈希，服务端必须先做同样的校验：
+  // 否则 --no-build 启动时会放行清单与磁盘不同步的半套发布，导致所有新安装失败。
+  for (const [rel, expected] of Object.entries(v.scripts || {})) {
+    const file = path.join(ROOT, rel);
+    if (!fs.existsSync(file)) throw new Error(`缺少分发脚本 ${rel}，请先运行 node build_single.js`);
+    if (sha256(fs.readFileSync(file)) !== expected) {
+      throw new Error(`${rel} 与 version.json 中的 sha256 不一致，请先运行 node build_single.js`);
+    }
   }
   return v.version;
 }

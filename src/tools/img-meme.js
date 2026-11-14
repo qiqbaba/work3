@@ -17,7 +17,9 @@
         const fontPct = Math.max(3, Math.min(25, parseFloat(ctx.get('fontPct')) || 9)) / 100;
         const color = ctx.get('color') || '#ffffff';
         const strokeColor = ctx.get('strokeColor') || '#000000';
-        const strokePct = Math.max(0, Math.min(25, parseFloat(ctx.get('strokePct')) || 0)) / 100;
+        const strokeRaw = parseFloat(ctx.get('strokePct'));
+        // 缺省时用选项默认值 7；显式的 0 表示不描边，不能被 || 吞掉。
+        const strokePct = Math.max(0, Math.min(25, Number.isFinite(strokeRaw) ? strokeRaw : 7)) / 100;
         const out = [];
         for (let i = 0; i < ctx.files.length; i++) {
           ctx.progress(i, ctx.files.length, `正在添加文字 ${i + 1}/${ctx.files.length}…`);

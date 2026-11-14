@@ -816,7 +816,9 @@
       await new Promise(resolve => setTimeout(resolve, 0));
       const rec = await billBuildRecord(r.file, {
         useQr: true, useCache: true,
-        ocrData: cloud ? ocrList[i] : null,
+        // OCR 列表按「本次待识别文件」顺序对应；records 下标会因排序/过滤变化，
+        // 用 i 取会错配，或让只覆盖部分文件的 OCR 结果全部落空。
+        ocrData: cloud ? ocrList[cursor] : null,
       });
       inv.records[i] = rec;
       processed++;

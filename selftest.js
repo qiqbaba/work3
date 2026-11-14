@@ -2228,6 +2228,64 @@
     arrEq(T.billReadOrderNumbers(sheets, selected), [INV_N1, INV_N2], '号码顺序');
   });
 
+  /* ---------- 本轮修复的边界回归 ---------- */
+  const LF = String.fromCharCode(10);
+  const CRLF = String.fromCharCode(13, 10);
+  const BOM = String.fromCharCode(0xFEFF);
+
+  t('回归: 范围形式的页面越界与非法输入应报错', () => {
+    for (const bad of ['99-100', '0-2', '-', '1-2-3', '4-6', '3-1']) {
+      let threw = false;
+      try { T.parsePageRanges(bad, 3); } catch (e) { threw = true; }
+      assert(threw, '越界/非法范围应报错: ' + bad);
+    }
+    arrEq(T.parsePageRanges('1 - 3', 3), [1, 2, 3], '允许范围中的空格');
+  });
+
+  t('回归: CSV 引号字段内的换行不拆行', () => {
+    const grid = T.parseCsvGrid(BOM + '编号,备注' + CRLF + 'A1,"第一行' + LF + '第二行"' + CRLF + 'A2,普通' + CRLF, ',');
+    arrEq(grid, [['编号', '备注'], ['A1', '第一行' + LF + '第二行'], ['A2', '普通']], '引号内换行应留在同一单元格');
+    arrEq(T.parseCsvGrid('a,b' + CRLF + '1,"x;y"' + CRLF, ',;'), [['a', 'b'], ['1', 'x;y']], '多分隔符');
+  });
+
+  t('回归: 序时簿 CSV 引号内换行不影响号码识别', async () => {
+    const csv = textFile('order-multiline.csv',
+      BOM + '发票号码,备注' + LF + INV_N1 + ',"含,逗号' + LF + '与第二行"' + CRLF + INV_N2 + ',普通', 'text/csv');
+    const sheets = await T.billReadOrderSheets(csv);
+    eq(sheets[0].grid.length, 3, '不应因引号内换行多出记录行');
+    assert(sheets[0].grid[1][1].includes('与第二行'), '引号字段内容应完整');
+    const scan = T.billScanOrderCandidates(sheets, 20);
+    arrEq(T.billReadOrderNumbers(sheets, scan.candidates[scan.suggested]), [INV_N1, INV_N2], '号码顺序');
+  });
+
+  t('回归: 无文本 PDF 转 Excel 应报错而非输出空工作簿', async () => {
+    const blank = await makePdfFile('blank.pdf', ['']);
+    let threw = false;
+    try { await runTool('pdf-to-excel', [blank]); } catch (e) { threw = true; }
+    assert(threw, '无文本层 PDF 不应静默生成 0 工作表的非法 xlsx');
+  });
+
+  t('回归: 证件照排版最后一行也居中', async () => {
+    const i = await makeImageFile('image/png', 200, 300, 'p.png');
+    const dpi = 150, gapMm = 1;
+    const r = await runTool('img-idphoto', [i], {
+      size: '1', paper: '6', dpi: String(dpi), bg: 'keep', count: '8', gap: String(gapMm), guide: false,
+    });
+    const cv = await blobCanvas(r[0].blob);
+    const data = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    const mm = v => Math.max(1, Math.round(v / 25.4 * dpi));
+    const ph = mm(35), gap = Math.round(gapMm / 25.4 * dpi);
+    const oy = Math.round((cv.height - (2 * ph + gap)) / 2);
+    const y = oy + ph + gap + Math.floor(ph * 0.7);
+    let min = cv.width, max = -1;
+    for (let x = 0; x < cv.width; x++) {
+      const k = (y * cv.width + x) * 4;
+      if (data[k + 2] > 150 && data[k] < 100) { if (x < min) min = x; if (x > max) max = x; }
+    }
+    assert(max > min, '第二行应能检测到照片像素');
+    assert(Math.abs((min + max) / 2 - cv.width / 2) <= 2, '第二行应水平居中: ' + min + '..' + max);
+  });
+
   /* ---------- 执行 ---------- */
   const panel = document.createElement('div');
   panel.id = 'selftestPanel';

@@ -118,11 +118,16 @@ function compute() {
   ].join('\n'));
 
   const singleBuf = Buffer.from(single, 'utf8');
-  const version = 'v' + sha(singleBuf).slice(0, 16);
   const scripts = Object.fromEntries(
     ['install.bat', 'install.ps1', 'update.ps1']
       .map(n => [n, sha(readBuf(path.join(ROOT, n)))])
   );
+  // 安装/更新脚本同样是发布输入：只哈希单文件 HTML 会让脚本改动后 version 不变，
+  // 服务端不发布新版本、已安装客户端也不会拉取修复后的脚本。
+  const version = 'v' + sha(Buffer.concat([
+    singleBuf,
+    Buffer.from(JSON.stringify({ scripts, vendor }), 'utf8'),
+  ])).slice(0, 16);
 
   let updated = new Date().toISOString();
   let manifest = {};

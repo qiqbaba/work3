@@ -18,8 +18,9 @@
         const fontPx = parseInt(ctx.get('fontPx'), 10) || 36;
         const angle = parseFloat(ctx.get('angle')) || 0;
         const opacity = Math.min(1, Math.max(0.05, parseFloat(ctx.get('opacity')) || 1));
-        const xPct = Math.min(100, Math.max(0, parseFloat(ctx.get('x')) || 0));
-        const yPct = Math.min(100, Math.max(0, parseFloat(ctx.get('y')) || 0));
+        const xRaw = parseFloat(ctx.get('x')), yRaw = parseFloat(ctx.get('y'));
+        const xPct = Math.min(100, Math.max(0, Number.isFinite(xRaw) ? xRaw : 50));
+        const yPct = Math.min(100, Math.max(0, Number.isFinite(yRaw) ? yRaw : 50));
         const cv = makeTextImage(text, { fontPx, angle, color: ctx.get('color') || '#d92020' });
         const png = await canvasToBlob(cv, 'image/png');
         const bytes = await png.arrayBuffer();

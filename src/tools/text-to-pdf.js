@@ -15,22 +15,11 @@
           const isHtml = /\.html?$/i.test(file.name);
           const isMd = /\.(md|markdown)$/i.test(file.name);
           if (isCsv) {
-            const grid = text.replace(/^\ufeff/, '').split(/\r?\n/).filter(l => l.trim()).map(line => {
-              const cells = [];
-              let cur = '', inQ = false;
-              for (let i = 0; i < line.length; i++) {
-                const ch = line[i];
-                if (inQ) {
-                  if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-                  else if (ch === '"') inQ = false;
-                  else cur += ch;
-                } else if (ch === '"') inQ = true;
-                else if (ch === ',') { cells.push(cur); cur = ''; }
-                else cur += ch;
-              }
-              cells.push(cur);
-              return cells;
-            });
+            // 引号字段内的换行属于同一条记录，不能拆成两行；
+            // 单元格内的换行渲染为空格，避免表格出现不可见控制字符。
+            const grid = parseCsvGrid(text, ',')
+              .filter(row => row.some(cell => cell.trim()))
+              .map(row => row.map(cell => cell.replace(/[\r\n]+/g, ' ')));
             out.push(...await renderGridToPdf(grid, `${baseName(file.name)}.pdf`));
             continue;
           }

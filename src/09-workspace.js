@@ -440,10 +440,14 @@
           else if (kind !== 'other') openPreview(f, f.name);
           return;
         }
-        if (a === 'rm') { releasePreview(f); state.files.splice(idx, 1); }
-        else if (a === 'up' && idx > 0) [state.files[idx - 1], state.files[idx]] = [state.files[idx], state.files[idx - 1]];
-        else if (a === 'down' && idx < state.files.length - 1) [state.files[idx + 1], state.files[idx]] = [state.files[idx], state.files[idx + 1]];
+        // 输入集合变化后旧结果已失效，必须与「添加文件 / 全部移除」一样清空，
+        // 否则仍能下载或打包与当前输入不符的产物。
+        let changed = false;
+        if (a === 'rm') { releasePreview(f); state.files.splice(idx, 1); changed = true; }
+        else if (a === 'up' && idx > 0) { [state.files[idx - 1], state.files[idx]] = [state.files[idx], state.files[idx - 1]]; changed = true; }
+        else if (a === 'down' && idx < state.files.length - 1) { [state.files[idx + 1], state.files[idx]] = [state.files[idx], state.files[idx + 1]]; changed = true; }
         renderFileList();
+        if (changed) clearResults();
       });
       wsFileList.appendChild(item);
     });

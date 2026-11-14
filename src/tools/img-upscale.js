@@ -12,7 +12,9 @@
       ],
       async run(ctx) {
         const scale = Math.max(1, parseFloat(ctx.get('scale')) || 2);
-        const sharpen = Math.max(0, Math.min(100, parseFloat(ctx.get('sharpen')) || 0));
+        const sharpenRaw = parseFloat(ctx.get('sharpen'));
+        // 默认标准锐化为 80；显式的 0（不锐化）是合法选项，必须保留。
+        const sharpen = Math.max(0, Math.min(100, Number.isFinite(sharpenRaw) ? sharpenRaw : 80));
         const format = ctx.get('format') || 'png';
         const out = [];
         for (let i = 0; i < ctx.files.length; i++) {

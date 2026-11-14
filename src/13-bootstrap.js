@@ -20,7 +20,7 @@
      与生产代码共用同一份 app.js，不再维护副本。 */
   if (window.__ENABLE_TEST_HOOKS__ === true) {
     window.__test = {
-      TOOLS, ORDERED_TOOLS, parsePageRanges, parseRangeGroups, bookletOrder,
+      TOOLS, ORDERED_TOOLS, parsePageRanges, parseRangeGroups, parseCsvGrid, bookletOrder,
       diffLines, formatBytes, sanitizeFileName, escapeHtml, state,
       md5Bytes, sha256Bytes, sha512Bytes, rc4Bytes, aesCbcEncrypt,
       bytesToHex, utf8ToBytes, reportError, cancelCurrentTask, CONFIG,

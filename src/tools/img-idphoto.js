@@ -29,12 +29,10 @@
         const wanted = Math.max(0, parseInt(ctx.get('count'), 10) || 0);
         const total = wanted ? Math.min(wanted, capacity) : capacity;
         if (!total) throw new Error('当前规格无法在所选纸张上排版，请降低 DPI 或换大纸张');
-        // 张数不满一整行时按实际占用的行列居中，否则照片块会偏半个单元格。
-        const usedCols = Math.min(cols, total);
+        // 整体按实际占用的行高居中；每一行还要按该行实际张数单独居中，
+        // 否则最后一行不满时整行会左偏半个版心。
         const usedRows = Math.ceil(total / cols);
-        const gridW = usedCols * pw + (usedCols - 1) * gap;
         const gridH = usedRows * ph + (usedRows - 1) * gap;
-        const ox = Math.round((PW - gridW) / 2);
         const oy = Math.round((PH - gridH) / 2);
         const bgMode = ctx.get('bg') || 'keep';
         const bgColors = { white: '#ffffff', red: '#d93025', blue: '#438EDB' };
@@ -79,8 +77,11 @@
           c.fillStyle = '#ffffff';
           c.fillRect(0, 0, PW, PH);
           for (let k = 0; k < total; k++) {
-            const x = ox + (k % cols) * (pw + gap);
-            const y = oy + Math.floor(k / cols) * (ph + gap);
+            const r = Math.floor(k / cols);
+            const rowCount = Math.min(cols, total - r * cols);
+            const rowW = rowCount * pw + (rowCount - 1) * gap;
+            const x = Math.round((PW - rowW) / 2) + (k % cols) * (pw + gap);
+            const y = oy + r * (ph + gap);
             c.drawImage(tile, x, y);
             if (guide) {
               c.strokeStyle = 'rgba(120,120,120,0.55)';

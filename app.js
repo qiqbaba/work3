@@ -215,11 +215,39 @@
     try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
   }
   function formatBytes(bytes) {
+    // 缺 size / NaN / 负数时不能让 Math.log 产生 "NaN undefined" 显示在界面上。
+    if (!Number.isFinite(bytes) || bytes < 0) return '—';
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // CSV 网格解析：引号字段内允许出现分隔符和换行（Excel 导出的备注、地址常见）。
+  // 若先按换行 split 再逐行解析，一条逻辑记录会被拆成多行，导致列数错乱。
+  function parseCsvGrid(text, separators) {
+    const seps = separators || ',';
+    const s = String(text == null ? '' : text).replace(/^\ufeff/, '');
+    const rows = [];
+    let row = [], cur = '', inQ = false;
+    const endRow = () => { row.push(cur); rows.push(row); row = []; cur = ''; };
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (inQ) {
+        if (ch === '"') {
+          if (s[i + 1] === '"') { cur += '"'; i++; }
+          else inQ = false;
+        } else cur += ch;
+      } else if (ch === '"') inQ = true;
+      else if (seps.indexOf(ch) >= 0) { row.push(cur); cur = ''; }
+      else if (ch === '\r' || ch === '\n') {
+        if (ch === '\r' && s[i + 1] === '\n') i++;
+        endRow();
+      } else cur += ch;
+    }
+    if (row.length || cur !== '') endRow();
+    return rows;
   }
 
   // 页面范围解析："1-3, 5" -> [1,2,3,5]；"1-3;4-6;7" -> 分组
@@ -232,17 +260,24 @@
       part = part.trim();
       if (!part) continue;
       if (part.includes('-')) {
-        const [a, b] = part.split('-');
-        const rawFrom = parseInt(a, 10), rawTo = parseInt(b, 10);
-        if (Number.isFinite(rawFrom) && Number.isFinite(rawTo) && rawFrom > rawTo) {
-          throw new Error(`页面范围无效：${part}（起始页不能大于结束页）`);
+        // 范围形式必须与单页形式一样拒绝越界 / 非法输入；此前 clamp 会静默处理
+        // 错误的页面（如 5 页文档输入 "99-100" 会得到第 5 页，"-" 会得到全部页）。
+        const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+        const from = m ? Number(m[1]) : NaN;
+        const to = m ? Number(m[2]) : NaN;
+        if (!m || from < 1 || to > maxPages || from > to) {
+          throw new Error(`页面范围无效：${part}（文档共 ${maxPages} 页）`);
         }
-        const from = Math.max(1, Math.min(rawFrom || 1, maxPages));
-        const to = Math.min(maxPages, Math.max(rawTo || maxPages, 1));
         for (let i = from; i <= to; i++) pages.add(i);
       } else {
-        const n = parseInt(part, 10);
-        if (!isNaN(n) && n >= 1 && n <= maxPages) pages.add(n);
+        // 单页形式也要拒绝非法 / 越界页码：旧实现用 parseInt 静默丢弃，
+        // "1,99" 会只处理第 1 页而不提示，"2abc" 会被当成第 2 页。
+        const m = part.match(/^(\d+)$/);
+        const n = m ? Number(m[1]) : NaN;
+        if (!m || n < 1 || n > maxPages) {
+          throw new Error(`页面范围无效：${part}（文档共 ${maxPages} 页）`);
+        }
+        pages.add(n);
       }
     }
     const sorted = Array.from(pages).sort((a, b) => a - b);
@@ -252,7 +287,7 @@
 
   // 多组范围解析："1-3; 4-6; 7" -> [[1,2,3],[4,5,6],[7]]
   function parseRangeGroups(rangeStr, maxPages) {
-    return rangeStr.split(/[;；]/)
+    return String(rangeStr == null ? '' : rangeStr).split(/[;；]/)
       .map(g => g.trim())
       .filter(Boolean)
       .map(g => parsePageRanges(g, maxPages))
@@ -2525,7 +2560,12 @@
   function aesPkcs7Unpad(data) {
     if (!data.length) return data;
     const pad = data[data.length - 1];
-    if (pad < 1 || pad > 16) return data;
+    // 只判断长度不够：末字节恰好在 1..16 的损坏数据会被静默截掉一段。
+    // 必须全部 pad 个字节都等于 pad 才是合法 PKCS#7 填充，否则原样返回。
+    if (pad < 1 || pad > 16 || pad > data.length) return data;
+    for (let i = data.length - pad; i < data.length; i++) {
+      if (data[i] !== pad) return data;
+    }
     return data.subarray(0, data.length - pad);
   }
 
@@ -2733,7 +2773,9 @@
       if (skipObjs.has(obj)) continue;
       const idnum = typeof ref.objectNumber === 'number' ? ref.objectNumber : Number(String(ref).split(' ')[0]);
       const gen = typeof ref.generationNumber === 'number' ? ref.generationNumber : Number(String(ref).split(' ')[1]) || 0;
-      transform(obj, idnum, gen, 0);
+      // 字符串分支返回新对象，必须写回 context；字典/数组/流是原地修改。
+      const transformed = transform(obj, idnum, gen, 0);
+      if (transformed !== obj) doc.context.assign(ref, transformed);
     }
   }
   function pdfEncryptDoc(doc, userPwd) {
@@ -2763,7 +2805,11 @@
 
   /* ---- Office 格式：docx / xlsx 生成与解析、pptx 解析 ---- */
   function xmlEsc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    // XML 1.0 不允许大部分控制字符；PDF 文本层或文件名带入时会生成打不开的 Office 文件。
+    return String(s)
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
   }
   function buildDocxBlob(pages) {
     const zip = new JSZip();
@@ -3756,10 +3802,11 @@
       if (!/金额|Total|小计|合计|票面/.test(billText(name))) return billText(val);
       if (/大写/.test(billText(name))) {
         const n = billCnAmountToFloat(val);
-        if (n > 0) { cnAmount = n; hasCn = true; }
+        // 红字发票 / 退款为负数金额，同样要识别；只排除 0 与非法值。
+        if (Number.isFinite(n) && n !== 0) { cnAmount = n; hasCn = true; }
       } else {
         const n = billCleanAmount(val);
-        if (n > 0) {
+        if (Number.isFinite(n) && n !== 0) {
           const corrected = isAcceptance ? n / 100 : n;
           numAmount = corrected; hasNum = true;
           return billFormatAmount(corrected);
@@ -4025,7 +4072,8 @@
     let rec = billEmptyRecord(file);
     if (o.useCache !== false) {
       const hit = billCacheGet(file);
-      if (hit) return { ...rec, ...hit, file, path: file.name, file_name: file.name, from_cache: true };
+      // 本次导入了 OCR 结果时必须重新解析合并，不能让缓存把新结果挡在门外。
+      if (hit && !o.ocrData) return { ...rec, ...hit, file, path: file.name, file_name: file.name, from_cache: true };
     }
     const filenameNumber = billApplyFilenameNumber(rec);
     const ext = billExt(file.name);
@@ -4355,22 +4403,7 @@
       // Excel 导出的 CSV 常带 UTF-8 BOM，备注字段也可能含逗号/引号；
       // 简单 split 会吞掉首个号码或把一列拆成两列，导致候选列识别错乱。
       const text = (await file.text()).replace(/^\ufeff/, '');
-      const grid = text.split(/\r?\n/).map(line => {
-        const cells = [];
-        let cur = '', inQ = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (inQ) {
-            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-            else if (ch === '"') inQ = false;
-            else cur += ch;
-          } else if (ch === '"') inQ = true;
-          else if (/[,;\t，]/.test(ch)) { cells.push(cur.trim()); cur = ''; }
-          else cur += ch;
-        }
-        cells.push(cur.trim());
-        return cells;
-      });
+      const grid = parseCsvGrid(text, ',;\t，').map(cells => cells.map(cell => cell.trim()));
       return [{ name: baseName(file.name), grid }];
     }
     if (/\.xls$/.test(name)) {
@@ -5015,7 +5048,8 @@
           const ph = useA4 ? A4[1] : ih + margin * 2;
           const page = doc.addPage([pw, ph]);
           const availW = pw - margin * 2, availH = ph - margin * 2;
-          const s = Math.min(availW / iw, availH / ih, 1);
+          // 「自适应」应等比铺满可用区域；限制缩放不超过 1 会让小图只占 A4 一角。
+          const s = Math.min(availW / iw, availH / ih);
           const w = iw * s, h = ih * s;
           page.drawImage(img, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
         }
@@ -5627,7 +5661,9 @@
         const fontPct = Math.max(3, Math.min(25, parseFloat(ctx.get('fontPct')) || 9)) / 100;
         const color = ctx.get('color') || '#ffffff';
         const strokeColor = ctx.get('strokeColor') || '#000000';
-        const strokePct = Math.max(0, Math.min(25, parseFloat(ctx.get('strokePct')) || 0)) / 100;
+        const strokeRaw = parseFloat(ctx.get('strokePct'));
+        // 缺省时用选项默认值 7；显式的 0 表示不描边，不能被 || 吞掉。
+        const strokePct = Math.max(0, Math.min(25, Number.isFinite(strokeRaw) ? strokeRaw : 7)) / 100;
         const out = [];
         for (let i = 0; i < ctx.files.length; i++) {
           ctx.progress(i, ctx.files.length, `正在添加文字 ${i + 1}/${ctx.files.length}…`);
@@ -5684,7 +5720,9 @@
       ],
       async run(ctx) {
         const scale = Math.max(1, parseFloat(ctx.get('scale')) || 2);
-        const sharpen = Math.max(0, Math.min(100, parseFloat(ctx.get('sharpen')) || 0));
+        const sharpenRaw = parseFloat(ctx.get('sharpen'));
+        // 默认标准锐化为 80；显式的 0（不锐化）是合法选项，必须保留。
+        const sharpen = Math.max(0, Math.min(100, Number.isFinite(sharpenRaw) ? sharpenRaw : 80));
         const format = ctx.get('format') || 'png';
         const out = [];
         for (let i = 0; i < ctx.files.length; i++) {
@@ -5893,7 +5931,8 @@
             mime = /^image\//.test(f.type) ? f.type : (detectImageMime(bytes) || 'application/octet-stream');
           }
           let b64 = bytesToBase64(bytes);
-          if (wrap > 0) b64 = b64.replace(new RegExp(`(.{${wrap}})`, 'g'), '$1\n');
+          // 用分段切分代替替换，长度为 wrap 整数倍时不会多出一个尾随空行。
+          if (wrap > 0) b64 = (b64.match(new RegExp(`.{1,${wrap}}`, 'g')) || []).join('\n');
           const text = (ctx.get('dataUrl') ? `data:${mime};base64,` : '') + b64;
           out.push({
             name: `${baseName(f.name)}_base64.txt`,
@@ -6167,12 +6206,10 @@
         const wanted = Math.max(0, parseInt(ctx.get('count'), 10) || 0);
         const total = wanted ? Math.min(wanted, capacity) : capacity;
         if (!total) throw new Error('当前规格无法在所选纸张上排版，请降低 DPI 或换大纸张');
-        // 张数不满一整行时按实际占用的行列居中，否则照片块会偏半个单元格。
-        const usedCols = Math.min(cols, total);
+        // 整体按实际占用的行高居中；每一行还要按该行实际张数单独居中，
+        // 否则最后一行不满时整行会左偏半个版心。
         const usedRows = Math.ceil(total / cols);
-        const gridW = usedCols * pw + (usedCols - 1) * gap;
         const gridH = usedRows * ph + (usedRows - 1) * gap;
-        const ox = Math.round((PW - gridW) / 2);
         const oy = Math.round((PH - gridH) / 2);
         const bgMode = ctx.get('bg') || 'keep';
         const bgColors = { white: '#ffffff', red: '#d93025', blue: '#438EDB' };
@@ -6217,8 +6254,11 @@
           c.fillStyle = '#ffffff';
           c.fillRect(0, 0, PW, PH);
           for (let k = 0; k < total; k++) {
-            const x = ox + (k % cols) * (pw + gap);
-            const y = oy + Math.floor(k / cols) * (ph + gap);
+            const r = Math.floor(k / cols);
+            const rowCount = Math.min(cols, total - r * cols);
+            const rowW = rowCount * pw + (rowCount - 1) * gap;
+            const x = Math.round((PW - rowW) / 2) + (k % cols) * (pw + gap);
+            const y = oy + r * (ph + gap);
             c.drawImage(tile, x, y);
             if (guide) {
               c.strokeStyle = 'rgba(120,120,120,0.55)';
@@ -6626,8 +6666,9 @@
         const fontPx = parseInt(ctx.get('fontPx'), 10) || 36;
         const angle = parseFloat(ctx.get('angle')) || 0;
         const opacity = Math.min(1, Math.max(0.05, parseFloat(ctx.get('opacity')) || 1));
-        const xPct = Math.min(100, Math.max(0, parseFloat(ctx.get('x')) || 0));
-        const yPct = Math.min(100, Math.max(0, parseFloat(ctx.get('y')) || 0));
+        const xRaw = parseFloat(ctx.get('x')), yRaw = parseFloat(ctx.get('y'));
+        const xPct = Math.min(100, Math.max(0, Number.isFinite(xRaw) ? xRaw : 50));
+        const yPct = Math.min(100, Math.max(0, Number.isFinite(yRaw) ? yRaw : 50));
         const cv = makeTextImage(text, { fontPx, angle, color: ctx.get('color') || '#d92020' });
         const png = await canvasToBlob(cv, 'image/png');
         const bytes = await png.arrayBuffer();
@@ -6672,8 +6713,11 @@
         if (!imgFile) throw new Error('请先选择图片文件');
         const widthPct = Math.min(150, Math.max(1, parseFloat(ctx.get('widthPct')) || 30)) / 100;
         const opacity = Math.min(1, Math.max(0.1, parseFloat(ctx.get('opacity')) || 1));
-        const xPct = Math.min(100, Math.max(0, parseFloat(ctx.get('x')) || 0));
-        const yPct = Math.min(100, Math.max(0, parseFloat(ctx.get('y')) || 0));
+        // 默认值是 50（居中）；用 || 会把显式传入的 0 也替换掉，
+        // 因此仅当参数缺失 / 非法时回退，合法的 0 必须保留。
+        const xRaw = parseFloat(ctx.get('x')), yRaw = parseFloat(ctx.get('y'));
+        const xPct = Math.min(100, Math.max(0, Number.isFinite(xRaw) ? xRaw : 50));
+        const yPct = Math.min(100, Math.max(0, Number.isFinite(yRaw) ? yRaw : 50));
         const out = [];
         for (const file of ctx.files) {
           const doc = await loadPdfDoc(file);
@@ -6726,9 +6770,12 @@
               if (objId == null || seen.has(objId)) continue;
               seen.add(objId);
               let imgData = null;
-              try { imgData = page.objs.get(objId); } catch (e) {
-                try { imgData = await new Promise(r => page.objs.get(objId, r)); } catch (e2) { /* skip */ }
-              }
+              try {
+                imgData = page.objs.get(objId);
+                // pdf.js 对尚未解析的对象返回 null 而不抛异常，必须走回调等待，
+                // 原来的 catch 分支永远进不去，这类图片会被静默跳过。
+                if (!imgData) imgData = await new Promise(resolve => page.objs.get(objId, resolve));
+              } catch (e) { /* skip broken image */ }
               if (!imgData) continue;
               let canvas = null;
               try {
@@ -6788,8 +6835,10 @@
         { key: 'quality', type: 'number', label: '输出质量 (1-100)', def: 85, min: 30, max: 100 },
       ],
       async run(ctx) {
-        const b = parseFloat(ctx.get('brightness')) || 1;
-        const c = parseFloat(ctx.get('contrast')) || 1;
+        const brightness = parseFloat(ctx.get('brightness'));
+        const contrast = parseFloat(ctx.get('contrast'));
+        const b = Number.isFinite(brightness) ? brightness : 1;
+        const c = Number.isFinite(contrast) ? contrast : 1.15;
         const parts = [`brightness(${b})`, `contrast(${c})`];
         if (ctx.get('grayscale')) parts.push('grayscale(1)');
         if (ctx.get('invert')) parts.push('invert(1)');
@@ -7208,6 +7257,8 @@ ${rows}</body></html>`;
             });
             return { name: '第' + pn + '页', grid, colWidths: colXs.map(() => 90) };
           });
+          // 无文本层（扫描件）时 sheets 为空，会生成不含任何 worksheet 的非法 xlsx。
+          if (!sheets.length) throw new Error(`${file.name} 未提取到可转换的文本，扫描件请先进行文字识别`);
           out.push({ name: `${baseName(file.name)}.xlsx`, blob: await buildXlsxBlob(sheets), meta: sheets.length + ' 个工作表' });
         }
         return out;
@@ -7580,8 +7631,13 @@ ${rows}</body></html>`;
           for (const it of items) (byPage[it.page] = byPage[it.page] || []).push(it);
           const esc = v => {
             const s = String(v == null ? '' : v);
-            return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
           };
+          // 无文本层（扫描件）时 parts 为空，只会导出一个仅含 BOM 的空文件，
+          // 与 PDF 转 Excel 一致地报错，避免用户误以为转换成功。
+          if (!Object.keys(byPage).length) {
+            throw new Error(`${file.name} 未提取到可转换的文本，扫描件请先进行文字识别`);
+          }
           const parts = [];
           Object.keys(byPage).forEach((pn, idx) => {
             const list = byPage[pn];
@@ -7984,22 +8040,11 @@ ${rows}</body></html>`;
           const isHtml = /\.html?$/i.test(file.name);
           const isMd = /\.(md|markdown)$/i.test(file.name);
           if (isCsv) {
-            const grid = text.replace(/^\ufeff/, '').split(/\r?\n/).filter(l => l.trim()).map(line => {
-              const cells = [];
-              let cur = '', inQ = false;
-              for (let i = 0; i < line.length; i++) {
-                const ch = line[i];
-                if (inQ) {
-                  if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-                  else if (ch === '"') inQ = false;
-                  else cur += ch;
-                } else if (ch === '"') inQ = true;
-                else if (ch === ',') { cells.push(cur); cur = ''; }
-                else cur += ch;
-              }
-              cells.push(cur);
-              return cells;
-            });
+            // 引号字段内的换行属于同一条记录，不能拆成两行；
+            // 单元格内的换行渲染为空格，避免表格出现不可见控制字符。
+            const grid = parseCsvGrid(text, ',')
+              .filter(row => row.some(cell => cell.trim()))
+              .map(row => row.map(cell => cell.replace(/[\r\n]+/g, ' ')));
             out.push(...await renderGridToPdf(grid, `${baseName(file.name)}.pdf`));
             continue;
           }
@@ -9162,10 +9207,14 @@ ${rows}</body></html>`;
           else if (kind !== 'other') openPreview(f, f.name);
           return;
         }
-        if (a === 'rm') { releasePreview(f); state.files.splice(idx, 1); }
-        else if (a === 'up' && idx > 0) [state.files[idx - 1], state.files[idx]] = [state.files[idx], state.files[idx - 1]];
-        else if (a === 'down' && idx < state.files.length - 1) [state.files[idx + 1], state.files[idx]] = [state.files[idx], state.files[idx + 1]];
+        // 输入集合变化后旧结果已失效，必须与「添加文件 / 全部移除」一样清空，
+        // 否则仍能下载或打包与当前输入不符的产物。
+        let changed = false;
+        if (a === 'rm') { releasePreview(f); state.files.splice(idx, 1); changed = true; }
+        else if (a === 'up' && idx > 0) { [state.files[idx - 1], state.files[idx]] = [state.files[idx], state.files[idx - 1]]; changed = true; }
+        else if (a === 'down' && idx < state.files.length - 1) { [state.files[idx + 1], state.files[idx]] = [state.files[idx], state.files[idx + 1]]; changed = true; }
         renderFileList();
+        if (changed) clearResults();
       });
       wsFileList.appendChild(item);
     });
@@ -9446,9 +9495,12 @@ ${rows}</body></html>`;
       const ok = tokens.some(tok => {
         if (tok === '*') return true;
         if (tok === 'image/*') return /^image\//.test(f.type) || isImageFileName(nameLc);
-        if (tok === '.pdf') return /\.pdf$/.test(nameLc);
         if (tok.charAt(0) === '.') return nameLc.endsWith(tok);
-        return true;
+        // 未知 token 不能无条件放行（会让类型校验形同虚设），
+        // 标准 MIME 写法按文件实际 type 精确匹配或按前缀匹配。
+        const mime = (f.type || '').toLowerCase();
+        if (tok.endsWith('/*')) return mime.startsWith(tok.slice(0, -1));
+        return mime === tok;
       });
       if (!ok) {
         reportError(`文件类型不支持：${f.name}`);
@@ -11233,7 +11285,9 @@ ${rows}</body></html>`;
       await new Promise(resolve => setTimeout(resolve, 0));
       const rec = await billBuildRecord(r.file, {
         useQr: true, useCache: true,
-        ocrData: cloud ? ocrList[i] : null,
+        // OCR 列表按「本次待识别文件」顺序对应；records 下标会因排序/过滤变化，
+        // 用 i 取会错配，或让只覆盖部分文件的 OCR 结果全部落空。
+        ocrData: cloud ? ocrList[cursor] : null,
       });
       inv.records[i] = rec;
       processed++;
@@ -11718,7 +11772,7 @@ ${rows}</body></html>`;
      与生产代码共用同一份 app.js，不再维护副本。 */
   if (window.__ENABLE_TEST_HOOKS__ === true) {
     window.__test = {
-      TOOLS, ORDERED_TOOLS, parsePageRanges, parseRangeGroups, bookletOrder,
+      TOOLS, ORDERED_TOOLS, parsePageRanges, parseRangeGroups, parseCsvGrid, bookletOrder,
       diffLines, formatBytes, sanitizeFileName, escapeHtml, state,
       md5Bytes, sha256Bytes, sha512Bytes, rc4Bytes, aesCbcEncrypt,
       bytesToHex, utf8ToBytes, reportError, cancelCurrentTask, CONFIG,

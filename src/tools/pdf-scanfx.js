@@ -11,8 +11,10 @@
         { key: 'quality', type: 'number', label: '输出质量 (1-100)', def: 85, min: 30, max: 100 },
       ],
       async run(ctx) {
-        const b = parseFloat(ctx.get('brightness')) || 1;
-        const c = parseFloat(ctx.get('contrast')) || 1;
+        const brightness = parseFloat(ctx.get('brightness'));
+        const contrast = parseFloat(ctx.get('contrast'));
+        const b = Number.isFinite(brightness) ? brightness : 1;
+        const c = Number.isFinite(contrast) ? contrast : 1.15;
         const parts = [`brightness(${b})`, `contrast(${c})`];
         if (ctx.get('grayscale')) parts.push('grayscale(1)');
         if (ctx.get('invert')) parts.push('invert(1)');

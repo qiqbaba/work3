@@ -15,8 +15,11 @@
         if (!imgFile) throw new Error('请先选择图片文件');
         const widthPct = Math.min(150, Math.max(1, parseFloat(ctx.get('widthPct')) || 30)) / 100;
         const opacity = Math.min(1, Math.max(0.1, parseFloat(ctx.get('opacity')) || 1));
-        const xPct = Math.min(100, Math.max(0, parseFloat(ctx.get('x')) || 0));
-        const yPct = Math.min(100, Math.max(0, parseFloat(ctx.get('y')) || 0));
+        // 默认值是 50（居中）；用 || 会把显式传入的 0 也替换掉，
+        // 因此仅当参数缺失 / 非法时回退，合法的 0 必须保留。
+        const xRaw = parseFloat(ctx.get('x')), yRaw = parseFloat(ctx.get('y'));
+        const xPct = Math.min(100, Math.max(0, Number.isFinite(xRaw) ? xRaw : 50));
+        const yPct = Math.min(100, Math.max(0, Number.isFinite(yRaw) ? yRaw : 50));
         const out = [];
         for (const file of ctx.files) {
           const doc = await loadPdfDoc(file);
