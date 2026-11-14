@@ -29,9 +29,10 @@
             const { width, height } = page.getSize();
             const w = width * widthPct;
             const h = w * (img.height / img.width);
+            // 选项约定为「下 0 上 100」，而 PDF 原点就在左下，故 y 直接按百分比取值。
             page.drawImage(img, {
               x: width * xPct / 100 - w / 2,
-              y: height * (1 - yPct / 100) - h / 2,
+              y: height * yPct / 100 - h / 2,
               width: w, height: h, opacity,
             });
           }

@@ -2163,6 +2163,71 @@
     eq(el('headerNav').querySelector('[data-cat="all"]').classList.contains('active'), true, '返回后恢复全部工具高亮');
   });
 
+  /* ---------- 回归：本轮修复的边界问题 ---------- */
+  t('回归: pdf-nup 2合1 等比缩放不变形', async () => {
+    const f = await makePdfFile('nup-ratio.pdf', ['A', 'B']);
+    const r = await runTool('pdf-nup', [f], { layout: '2', gap: 8 });
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await r[0].blob.arrayBuffer()) }).promise;
+    const tc = await (await doc.getPage(1)).getTextContent();
+    const it = tc.items.find(x => x.str.trim());
+    assert(it, '拼版后应保留文字');
+    const sx = Math.abs(it.transform[0]), sy = Math.abs(it.transform[3]);
+    assert(Math.abs(sx - sy) < 0.01, `内容横纵缩放应一致，实际 ${sx} / ${sy}`);
+  });
+
+  t('回归: 添加图片「下0 上100」方向正确', async () => {
+    const f = await makePdfFile('pos.pdf', ['']);
+    const cv = document.createElement('canvas');
+    cv.width = 40; cv.height = 20;
+    const c = cv.getContext('2d');
+    c.fillStyle = '#ff0000'; c.fillRect(0, 0, 40, 20);
+    const png = await new Promise(res => cv.toBlob(res, 'image/png'));
+    const img = new File([png], 'red.png', { type: 'image/png' });
+    const opt = y => ({ img, range: '', x: 50, y, widthPct: 30, opacity: 1 });
+    const lower = await runTool('pdf-add-image', [f], opt(0));
+    const upper = await runTool('pdf-add-image', [f], opt(100));
+    const redY = async blob => {
+      const out = await renderPdfCanvas(blob, 1, 1);
+      const d = out.getContext('2d').getImageData(0, 0, out.width, out.height).data;
+      let sum = 0, n = 0;
+      for (let y = 0; y < out.height; y++) {
+        for (let x = 0; x < out.width; x++) {
+          const i = (y * out.width + x) * 4;
+          if (d[i] > 180 && d[i + 1] < 80 && d[i + 2] < 80) { sum += y; n++; }
+        }
+      }
+      assert(n > 100, '渲染结果中未找到红色图片像素');
+      return sum / n;
+    };
+    const yLower = await redY(lower[0].blob), yUpper = await redY(upper[0].blob);
+    assert(yLower > yUpper + 100, `下0 应比 上100 更靠下（canvas y: ${yLower} / ${yUpper}）`);
+  });
+
+  t('回归: HTML 转 PDF 保留 body 级裸文本', async () => {
+    const rich = textFile('body-inline.html', '<html><body>Hello <b>World</b></body></html>', 'text/html');
+    const plain = textFile('body-only.html', '<html><body><b>World</b></body></html>', 'text/html');
+    const a = darkPixels(await renderPdfCanvas((await runTool('text-to-pdf', [rich], { fontSize: 14 }))[0].blob, 1, 1));
+    const b = darkPixels(await renderPdfCanvas((await runTool('text-to-pdf', [plain], { fontSize: 14 }))[0].blob, 1, 1));
+    assert(a > b + 50, `body 裸文本不应丢失（含 Hello=${a}，不含=${b}）`);
+  });
+
+  t('回归: XLSX 导出保留数值 0', async () => {
+    const blob = await T.buildXlsxBlob([{ name: 's', grid: [['金额', 0, '']] }]);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const sheet = await zip.file('xl/worksheets/sheet1.xml').async('string');
+    assert(sheet.includes('>0<'), '数值 0 不应被写成空单元格');
+  });
+
+  t('回归: 序时簿 CSV 支持 BOM 与引号字段', async () => {
+    const csv = textFile('order.csv', '\ufeff发票号码,备注\n' + INV_N1 + ',"含,逗号"\n' + INV_N2 + ',普通', 'text/csv');
+    const sheets = await T.billReadOrderSheets(csv);
+    eq(sheets[0].grid[0][0], '发票号码', '应去掉 UTF-8 BOM');
+    eq(sheets[0].grid[1][1], '含,逗号', '引号字段不应被拆列');
+    const scan = T.billScanOrderCandidates(sheets, 20);
+    const selected = scan.candidates[scan.suggested];
+    arrEq(T.billReadOrderNumbers(sheets, selected), [INV_N1, INV_N2], '号码顺序');
+  });
+
   /* ---------- 执行 ---------- */
   const panel = document.createElement('div');
   panel.id = 'selftestPanel';

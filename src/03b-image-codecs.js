@@ -266,7 +266,9 @@
         const x = (i % across) * tw;
         const y = Math.floor(i / across) * th;
         if (y >= height) break;
-        chunks.push({ x, y, w: Math.min(tw, width - x), h: Math.min(th, height - y), offset: offs[i], byteCount: sizes[i] || 0 });
+        // 分块 TIFF 的每个 tile 在文件里都是完整的 tw×th（边缘用填充像素补齐），
+        // 因此行跨距恒为 tw，不能用裁剪后的 chunk.w，否则右/下边缘块会整体错位。
+        chunks.push({ x, y, w: Math.min(tw, width - x), h: Math.min(th, height - y), stride: tw, offset: offs[i], byteCount: sizes[i] || 0 });
       }
     } else {
       const offs = values(273) || [];
@@ -278,7 +280,7 @@
         const next = i + 1 < offs.length ? offs[i + 1] : bytes.length;
         chunks.push({
           x: 0, y, w: width, h: Math.min(rowsPerStrip, height - y),
-          offset: offs[i], byteCount: sizes[i] || Math.max(0, next - offs[i])
+          stride: width, offset: offs[i], byteCount: sizes[i] || Math.max(0, next - offs[i])
         });
       }
     }
@@ -339,7 +341,7 @@
       }
       let raw = bytes.subarray(chunk.offset, chunk.offset + chunk.byteCount);
       raw = await tiffDecompress(raw, info.compression);
-      const rowSamples = chunk.w * info.samples;
+      const rowSamples = (chunk.stride || chunk.w) * info.samples;
       if (info.predictor === 2) tiffUndoPredictor(raw, rowSamples, info.samples, bps, info.le);
       const samples = info.samples;
       for (let y = 0; y < chunk.h; y++) {
@@ -416,7 +418,8 @@
       const slice = bytes.subarray(chunk.offset, chunk.offset + chunk.byteCount);
       if (!slice.length) continue;
       const part = await imageBlobToCanvas(new Blob([slice], { type: 'image/jpeg' }));
-      ctx.drawImage(part, chunk.x, chunk.y, chunk.w, chunk.h);
+      // 边缘 tile 解码后仍是完整 tw×th，按源区域裁剪后放置，避免被缩放变形。
+      ctx.drawImage(part, 0, 0, chunk.w, chunk.h, chunk.x, chunk.y, chunk.w, chunk.h);
     }
     return canvas;
   }

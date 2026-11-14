@@ -140,7 +140,8 @@
   function sha512Bytes(input, variant) {
     const msg = input;
     const n = msg.length;
-    const total = (((n + 17) >> 7) + 1) * 128;
+    // 填充后总长须为 128 的整数倍且至少容纳 0x80 与 16 字节长度（n+17）。
+    const total = (((n + 16) >> 7) + 1) * 128;
     const buf = new Uint8Array(total);
     buf.set(msg); buf[n] = 0x80;
     const dv = new DataView(buf.buffer);
@@ -571,7 +572,9 @@
     sheets.forEach((sheet, si) => {
       const colLetter = n => { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
       const rowsXml = sheet.grid.map((row, ri) => {
-        const cells = row.map((cell, ci) => cell ? '<c r="' + colLetter(ci) + (ri + 1) + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(cell) + '</t></is></c>' : '').join('');
+        // 0 / false 也是有效数据，不能用真假值判断是否输出单元格。
+        const cells = row.map((cell, ci) => (cell == null || cell === '')
+          ? '' : '<c r="' + colLetter(ci) + (ri + 1) + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(cell) + '</t></is></c>').join('');
         return cells ? '<row r="' + (ri + 1) + '">' + cells + '</row>' : '';
       }).join('');
       const cols = [];
@@ -613,10 +616,14 @@
         shared.push(t);
       }
     }
-    const wbDom = new DOMParser().parseFromString(await (zip.file('xl/workbook.xml') || zip.file('xl/workbook.xml')).async('string'), 'application/xml');
-    const relsDom = new DOMParser().parseFromString(await zip.file('xl/_rels/workbook.xml.rels').async('string'), 'application/xml');
+    const wbEntry = zip.file('xl/workbook.xml') || zip.file('xl/Workbook.xml');
+    if (!wbEntry) throw new Error('无法识别的 xlsx 文件');
+    const wbDom = new DOMParser().parseFromString(await wbEntry.async('string'), 'application/xml');
+    const relEntry = zip.file('xl/_rels/workbook.xml.rels');
+    const relsDom = relEntry ? new DOMParser().parseFromString(await relEntry.async('string'), 'application/xml') : null;
     const relMap = {};
-    for (const rel of relsDom.getElementsByTagName('Relationship')) relMap[rel.getAttribute('Id')] = rel.getAttribute('Target');
+    // 缺少关系表时按 sheet1、sheet2… 的约定兜底，不阻断转换。
+    if (relsDom) for (const rel of relsDom.getElementsByTagName('Relationship')) relMap[rel.getAttribute('Id')] = rel.getAttribute('Target');
     const sheets = [];
     const sheetEls = wbDom.getElementsByTagName('sheet');
     for (let si = 0; si < sheetEls.length; si++) {
@@ -1022,30 +1029,35 @@
 
   /* ---- 行列网格渲染为 PDF 表格（供 CSV 转 PDF 使用） ---- */
   async function renderGridToPdf(grid, outName) {
-    const PW = 842, PH = 595, colW = 110, rowH = 24, perPage = Math.floor((PH - 70) / rowH);
+    const PW = 842, PH = 595, colW = 110, rowH = 24, MARGIN = 24;
+    const perPage = Math.floor((PH - 70) / rowH);
+    // 横向放不下的列必须分页，否则第 8 列起会画到画布外被静默丢弃。
+    const colsPerPage = Math.max(1, Math.floor((PW - MARGIN * 2) / colW));
     const cols = grid.reduce((m, r) => Math.max(m, r.length), 1);
     const doc = await PDFLib.PDFDocument.create();
     for (let r0 = 0; r0 < Math.max(1, grid.length); r0 += perPage) {
-      const { cv, c, scale } = makeOfficeCanvas(PW, PH);
-      for (let ri = 0; ri < perPage && r0 + ri < grid.length; ri++) {
-        const row = grid[r0 + ri] || [];
-        const y = 30 + ri * rowH;
-        for (let ci = 0; ci < cols; ci++) {
-          const x = 24 + ci * colW;
-          c.strokeStyle = '#999';
-          c.lineWidth = 1;
-          c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
-          const txt = String(row[ci] || '').slice(0, 14);
-          if (txt) {
-            c.fillStyle = '#000';
-            c.font = '20px "Microsoft YaHei", sans-serif';
-            c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+      for (let c0 = 0; c0 < Math.max(1, cols); c0 += colsPerPage) {
+        const { cv, c, scale } = makeOfficeCanvas(PW, PH);
+        for (let ri = 0; ri < perPage && r0 + ri < grid.length; ri++) {
+          const row = grid[r0 + ri] || [];
+          const y = 30 + ri * rowH;
+          for (let ci = c0; ci < Math.min(cols, c0 + colsPerPage); ci++) {
+            const x = MARGIN + (ci - c0) * colW;
+            c.strokeStyle = '#999';
+            c.lineWidth = 1;
+            c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
+            const txt = String(row[ci] || '').slice(0, 14);
+            if (txt) {
+              c.fillStyle = '#000';
+              c.font = '20px "Microsoft YaHei", sans-serif';
+              c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+            }
           }
         }
+        const png = await canvasToBlob(cv, 'image/png');
+        const page = doc.addPage([PW, PH]);
+        page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
       }
-      const png = await canvasToBlob(cv, 'image/png');
-      const page = doc.addPage([PW, PH]);
-      page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
     }
     return [{ name: outName, blob: bytesToBlob(await doc.save(), 'application/pdf') }];
   }

@@ -213,7 +213,8 @@
       const rid = 'rId' + (idx + 1);
       const name = '图片 ' + (idx + 1);
       const inline = `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${idx + 2}" name="${xmlEsc(name)}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${idx + 2}" name="${xmlEsc(im.name)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
-      if (cfg.title) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(cfg.title)}</w:t></w:r></w:p>`;
+      // 文档标题只写在首张图片上方，不能随每张图片重复插入。
+      if (cfg.title && idx === 0) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(cfg.title)}</w:t></w:r></w:p>`;
       body += `<w:p><w:r>${inline}</w:r></w:p>`;
       if (cfg.caption) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(im.caption || '')}</w:t></w:r></w:p>`;
       if (cfg.pageBreak && idx < images.length - 1) body += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
@@ -242,16 +243,25 @@
     zip.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships ' + RELS + '><Relationship Id="rId1" Type="' + REL + '/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
     const EMU_PER_PX = 9525;
     const widthPx = Math.round(Math.max(1, Math.min(25, cfg.widthCm || 15)) / 2.54 * 96);
+    // Excel 单行高度上限 409.5pt，超出会被截断并让图片压到下一行；
+    // 竖图按上限等比缩小（保持宽高比），行高与锚点尺寸必须用同一份几何数据。
+    const baseCx = Math.round(widthPx * EMU_PER_PX);
+    const MAX_ROW_PT = 408;
+    const geometry = images.map(im => {
+      let cx = baseCx;
+      let cy = Math.max(1, Math.round(baseCx * im.h / Math.max(1, im.w)));
+      const cap = MAX_ROW_PT * 12700;
+      if (cy > cap) { cx = Math.max(1, Math.round(cx * cap / cy)); cy = cap; }
+      return { cx, cy };
+    });
     const rows = images.map((im, i) => {
-      const cy = Math.round(widthPx * im.h / Math.max(1, im.w) * EMU_PER_PX);
-      const heightPt = Math.round(cy / 12700);
+      const heightPt = Math.max(1, Math.round(geometry[i].cy / 12700));
       return `<row r="${i + 1}" ht="${heightPt}" customHeight="1"><c r="A${i + 1}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(im.caption || '')}</t></is></c></row>`;
     }).join('');
     zip.file('xl/worksheets/sheet1.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="' + REL + '"><sheetData>' + rows + '</sheetData><drawing r:id="rId1"/></worksheet>');
     zip.file('xl/worksheets/_rels/sheet1.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships ' + RELS + '><Relationship Id="rId1" Type="' + REL + '/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
     const anchors = images.map((im, i) => {
-      const cx = Math.round(widthPx * EMU_PER_PX);
-      const cy = Math.round(widthPx * im.h / Math.max(1, im.w) * EMU_PER_PX);
+      const { cx, cy } = geometry[i];
       return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${i}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${cx}" cy="${cy}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${i + 2}" name="${xmlEsc(im.name)}"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${i + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
     }).join('');
     zip.file('xl/drawings/drawing1.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="' + REL + '">' + anchors + '</xdr:wsDr>');
@@ -457,7 +467,7 @@
         d[i] = 255; d[i + 1] = 64; d[i + 2] = 64;
         changed++;
       } else {
-        const gray = Math.round((da[i] + da[i + 1] + da[i + 2]) / 9);
+        const gray = Math.round((da[i] + da[i + 1] + da[i + 2]) / 3);
         d[i] = d[i + 1] = d[i + 2] = gray;
       }
       d[i + 3] = 255;

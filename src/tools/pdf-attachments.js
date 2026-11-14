@@ -31,6 +31,16 @@
           out.push({ name: `${baseName(pdfFile.name)}_带附件.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf'), meta: `已嵌入 ${attachFiles.length} 个附件` });
           return out;
         }
+        // 多个 PDF 可能内嵌同名附件（如都叫“报价单.xlsx”），必须带来源并去重，
+        // 否则结果列表打包下载时会互相覆盖、静默丢文件。
+        const usedNames = new Set();
+        const uniqueName = (stem, ext) => {
+          let name = `${stem}${ext}`;
+          let n = 2;
+          while (usedNames.has(name.toLowerCase())) name = `${stem}_${n++}${ext}`;
+          usedNames.add(name.toLowerCase());
+          return name;
+        };
         for (const file of ctx.files) {
           if (!/\.pdf$/i.test(file.name)) continue;
           const doc = await loadPdfDoc(file);
@@ -40,8 +50,12 @@
               out.push({ name: `${baseName(file.name)}_无附件.txt`, blob: new Blob(['该 PDF 无内嵌附件。'], { type: 'text/plain' }) });
             } else {
               for (const att of files) {
+                const rawName = String(att.name || '附件');
+                const dot = rawName.lastIndexOf('.');
+                const ext = dot > 0 ? rawName.slice(dot) : '';
+                const stem = sanitizeFileName(`${baseName(file.name)}_${dot > 0 ? rawName.slice(0, dot) : rawName}`);
                 out.push({
-                  name: `附件_${sanitizeFileName(att.name)}`,
+                  name: uniqueName(stem, ext),
                   blob: bytesToBlob(att.bytes, 'application/octet-stream'),
                   meta: formatBytes(att.bytes.length),
                 });

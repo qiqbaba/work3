@@ -899,7 +899,9 @@
         const x = (i % across) * tw;
         const y = Math.floor(i / across) * th;
         if (y >= height) break;
-        chunks.push({ x, y, w: Math.min(tw, width - x), h: Math.min(th, height - y), offset: offs[i], byteCount: sizes[i] || 0 });
+        // 分块 TIFF 的每个 tile 在文件里都是完整的 tw×th（边缘用填充像素补齐），
+        // 因此行跨距恒为 tw，不能用裁剪后的 chunk.w，否则右/下边缘块会整体错位。
+        chunks.push({ x, y, w: Math.min(tw, width - x), h: Math.min(th, height - y), stride: tw, offset: offs[i], byteCount: sizes[i] || 0 });
       }
     } else {
       const offs = values(273) || [];
@@ -911,7 +913,7 @@
         const next = i + 1 < offs.length ? offs[i + 1] : bytes.length;
         chunks.push({
           x: 0, y, w: width, h: Math.min(rowsPerStrip, height - y),
-          offset: offs[i], byteCount: sizes[i] || Math.max(0, next - offs[i])
+          stride: width, offset: offs[i], byteCount: sizes[i] || Math.max(0, next - offs[i])
         });
       }
     }
@@ -972,7 +974,7 @@
       }
       let raw = bytes.subarray(chunk.offset, chunk.offset + chunk.byteCount);
       raw = await tiffDecompress(raw, info.compression);
-      const rowSamples = chunk.w * info.samples;
+      const rowSamples = (chunk.stride || chunk.w) * info.samples;
       if (info.predictor === 2) tiffUndoPredictor(raw, rowSamples, info.samples, bps, info.le);
       const samples = info.samples;
       for (let y = 0; y < chunk.h; y++) {
@@ -1049,7 +1051,8 @@
       const slice = bytes.subarray(chunk.offset, chunk.offset + chunk.byteCount);
       if (!slice.length) continue;
       const part = await imageBlobToCanvas(new Blob([slice], { type: 'image/jpeg' }));
-      ctx.drawImage(part, chunk.x, chunk.y, chunk.w, chunk.h);
+      // 边缘 tile 解码后仍是完整 tw×th，按源区域裁剪后放置，避免被缩放变形。
+      ctx.drawImage(part, 0, 0, chunk.w, chunk.h, chunk.x, chunk.y, chunk.w, chunk.h);
     }
     return canvas;
   }
@@ -1947,7 +1950,8 @@
       const rid = 'rId' + (idx + 1);
       const name = '图片 ' + (idx + 1);
       const inline = `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${idx + 2}" name="${xmlEsc(name)}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${idx + 2}" name="${xmlEsc(im.name)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
-      if (cfg.title) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(cfg.title)}</w:t></w:r></w:p>`;
+      // 文档标题只写在首张图片上方，不能随每张图片重复插入。
+      if (cfg.title && idx === 0) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(cfg.title)}</w:t></w:r></w:p>`;
       body += `<w:p><w:r>${inline}</w:r></w:p>`;
       if (cfg.caption) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(im.caption || '')}</w:t></w:r></w:p>`;
       if (cfg.pageBreak && idx < images.length - 1) body += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
@@ -1976,16 +1980,25 @@
     zip.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships ' + RELS + '><Relationship Id="rId1" Type="' + REL + '/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
     const EMU_PER_PX = 9525;
     const widthPx = Math.round(Math.max(1, Math.min(25, cfg.widthCm || 15)) / 2.54 * 96);
+    // Excel 单行高度上限 409.5pt，超出会被截断并让图片压到下一行；
+    // 竖图按上限等比缩小（保持宽高比），行高与锚点尺寸必须用同一份几何数据。
+    const baseCx = Math.round(widthPx * EMU_PER_PX);
+    const MAX_ROW_PT = 408;
+    const geometry = images.map(im => {
+      let cx = baseCx;
+      let cy = Math.max(1, Math.round(baseCx * im.h / Math.max(1, im.w)));
+      const cap = MAX_ROW_PT * 12700;
+      if (cy > cap) { cx = Math.max(1, Math.round(cx * cap / cy)); cy = cap; }
+      return { cx, cy };
+    });
     const rows = images.map((im, i) => {
-      const cy = Math.round(widthPx * im.h / Math.max(1, im.w) * EMU_PER_PX);
-      const heightPt = Math.round(cy / 12700);
+      const heightPt = Math.max(1, Math.round(geometry[i].cy / 12700));
       return `<row r="${i + 1}" ht="${heightPt}" customHeight="1"><c r="A${i + 1}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(im.caption || '')}</t></is></c></row>`;
     }).join('');
     zip.file('xl/worksheets/sheet1.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="' + REL + '"><sheetData>' + rows + '</sheetData><drawing r:id="rId1"/></worksheet>');
     zip.file('xl/worksheets/_rels/sheet1.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships ' + RELS + '><Relationship Id="rId1" Type="' + REL + '/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
     const anchors = images.map((im, i) => {
-      const cx = Math.round(widthPx * EMU_PER_PX);
-      const cy = Math.round(widthPx * im.h / Math.max(1, im.w) * EMU_PER_PX);
+      const { cx, cy } = geometry[i];
       return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${i}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${cx}" cy="${cy}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${i + 2}" name="${xmlEsc(im.name)}"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${i + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
     }).join('');
     zip.file('xl/drawings/drawing1.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="' + REL + '">' + anchors + '</xdr:wsDr>');
@@ -2191,7 +2204,7 @@
         d[i] = 255; d[i + 1] = 64; d[i + 2] = 64;
         changed++;
       } else {
-        const gray = Math.round((da[i] + da[i + 1] + da[i + 2]) / 9);
+        const gray = Math.round((da[i] + da[i + 1] + da[i + 2]) / 3);
         d[i] = d[i + 1] = d[i + 2] = gray;
       }
       d[i + 3] = 255;
@@ -2341,7 +2354,8 @@
   function sha512Bytes(input, variant) {
     const msg = input;
     const n = msg.length;
-    const total = (((n + 17) >> 7) + 1) * 128;
+    // 填充后总长须为 128 的整数倍且至少容纳 0x80 与 16 字节长度（n+17）。
+    const total = (((n + 16) >> 7) + 1) * 128;
     const buf = new Uint8Array(total);
     buf.set(msg); buf[n] = 0x80;
     const dv = new DataView(buf.buffer);
@@ -2772,7 +2786,9 @@
     sheets.forEach((sheet, si) => {
       const colLetter = n => { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
       const rowsXml = sheet.grid.map((row, ri) => {
-        const cells = row.map((cell, ci) => cell ? '<c r="' + colLetter(ci) + (ri + 1) + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(cell) + '</t></is></c>' : '').join('');
+        // 0 / false 也是有效数据，不能用真假值判断是否输出单元格。
+        const cells = row.map((cell, ci) => (cell == null || cell === '')
+          ? '' : '<c r="' + colLetter(ci) + (ri + 1) + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(cell) + '</t></is></c>').join('');
         return cells ? '<row r="' + (ri + 1) + '">' + cells + '</row>' : '';
       }).join('');
       const cols = [];
@@ -2814,10 +2830,14 @@
         shared.push(t);
       }
     }
-    const wbDom = new DOMParser().parseFromString(await (zip.file('xl/workbook.xml') || zip.file('xl/workbook.xml')).async('string'), 'application/xml');
-    const relsDom = new DOMParser().parseFromString(await zip.file('xl/_rels/workbook.xml.rels').async('string'), 'application/xml');
+    const wbEntry = zip.file('xl/workbook.xml') || zip.file('xl/Workbook.xml');
+    if (!wbEntry) throw new Error('无法识别的 xlsx 文件');
+    const wbDom = new DOMParser().parseFromString(await wbEntry.async('string'), 'application/xml');
+    const relEntry = zip.file('xl/_rels/workbook.xml.rels');
+    const relsDom = relEntry ? new DOMParser().parseFromString(await relEntry.async('string'), 'application/xml') : null;
     const relMap = {};
-    for (const rel of relsDom.getElementsByTagName('Relationship')) relMap[rel.getAttribute('Id')] = rel.getAttribute('Target');
+    // 缺少关系表时按 sheet1、sheet2… 的约定兜底，不阻断转换。
+    if (relsDom) for (const rel of relsDom.getElementsByTagName('Relationship')) relMap[rel.getAttribute('Id')] = rel.getAttribute('Target');
     const sheets = [];
     const sheetEls = wbDom.getElementsByTagName('sheet');
     for (let si = 0; si < sheetEls.length; si++) {
@@ -3223,30 +3243,35 @@
 
   /* ---- 行列网格渲染为 PDF 表格（供 CSV 转 PDF 使用） ---- */
   async function renderGridToPdf(grid, outName) {
-    const PW = 842, PH = 595, colW = 110, rowH = 24, perPage = Math.floor((PH - 70) / rowH);
+    const PW = 842, PH = 595, colW = 110, rowH = 24, MARGIN = 24;
+    const perPage = Math.floor((PH - 70) / rowH);
+    // 横向放不下的列必须分页，否则第 8 列起会画到画布外被静默丢弃。
+    const colsPerPage = Math.max(1, Math.floor((PW - MARGIN * 2) / colW));
     const cols = grid.reduce((m, r) => Math.max(m, r.length), 1);
     const doc = await PDFLib.PDFDocument.create();
     for (let r0 = 0; r0 < Math.max(1, grid.length); r0 += perPage) {
-      const { cv, c, scale } = makeOfficeCanvas(PW, PH);
-      for (let ri = 0; ri < perPage && r0 + ri < grid.length; ri++) {
-        const row = grid[r0 + ri] || [];
-        const y = 30 + ri * rowH;
-        for (let ci = 0; ci < cols; ci++) {
-          const x = 24 + ci * colW;
-          c.strokeStyle = '#999';
-          c.lineWidth = 1;
-          c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
-          const txt = String(row[ci] || '').slice(0, 14);
-          if (txt) {
-            c.fillStyle = '#000';
-            c.font = '20px "Microsoft YaHei", sans-serif';
-            c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+      for (let c0 = 0; c0 < Math.max(1, cols); c0 += colsPerPage) {
+        const { cv, c, scale } = makeOfficeCanvas(PW, PH);
+        for (let ri = 0; ri < perPage && r0 + ri < grid.length; ri++) {
+          const row = grid[r0 + ri] || [];
+          const y = 30 + ri * rowH;
+          for (let ci = c0; ci < Math.min(cols, c0 + colsPerPage); ci++) {
+            const x = MARGIN + (ci - c0) * colW;
+            c.strokeStyle = '#999';
+            c.lineWidth = 1;
+            c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
+            const txt = String(row[ci] || '').slice(0, 14);
+            if (txt) {
+              c.fillStyle = '#000';
+              c.font = '20px "Microsoft YaHei", sans-serif';
+              c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+            }
           }
         }
+        const png = await canvasToBlob(cv, 'image/png');
+        const page = doc.addPage([PW, PH]);
+        page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
       }
-      const png = await canvasToBlob(cv, 'image/png');
-      const page = doc.addPage([PW, PH]);
-      page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
     }
     return [{ name: outName, blob: bytesToBlob(await doc.save(), 'application/pdf') }];
   }
@@ -4311,7 +4336,7 @@
   function billCellText(v) {
     if (v == null) return '';
     if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(v);
-    return String(v).replace(/\u3000/g, ' ').trim();
+    return String(v).replace(/^\ufeff/, '').replace(/\u3000/g, ' ').trim();
   }
   function billIsInvoiceLike(text) {
     if (!text || text.length > 40 || BILL_SKIP_WORDS.has(text)) return false;
@@ -4327,8 +4352,25 @@
     const name = String(file.name || '').toLowerCase();
     if (/\.(xlsx|xlsm)$/.test(name)) return parseXlsxFile(file);
     if (/\.(csv|txt)$/.test(name)) {
-      const text = await file.text();
-      const grid = text.split(/\r?\n/).map(line => line.split(/[,\t;，]/).map(s => s.trim()));
+      // Excel 导出的 CSV 常带 UTF-8 BOM，备注字段也可能含逗号/引号；
+      // 简单 split 会吞掉首个号码或把一列拆成两列，导致候选列识别错乱。
+      const text = (await file.text()).replace(/^\ufeff/, '');
+      const grid = text.split(/\r?\n/).map(line => {
+        const cells = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (inQ) {
+            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+            else if (ch === '"') inQ = false;
+            else cur += ch;
+          } else if (ch === '"') inQ = true;
+          else if (/[,;\t，]/.test(ch)) { cells.push(cur.trim()); cur = ''; }
+          else cur += ch;
+        }
+        cells.push(cur.trim());
+        return cells;
+      });
       return [{ name: baseName(file.name), grid }];
     }
     if (/\.xls$/.test(name)) {
@@ -4880,15 +4922,23 @@
           for (let i = 0; i < total; i += per) {
             ctx.progress(i, total, `正在拼版 ${Math.min(i + per, total)}/${total}…`);
             const page = doc.addPage([srcSize.width, srcSize.height]);
-            const cellW = (srcSize.width - gap * (cols + 1)) / cols;
-            const cellH = (srcSize.height - gap * (rows + 1)) / rows;
+            const cellW = Math.max(1, (srcSize.width - gap * (cols + 1)) / cols);
+            const cellH = Math.max(1, (srcSize.height - gap * (rows + 1)) / rows);
             for (let k = 0; k < per && i + k < total; k++) {
               const [sp] = await doc.copyPages(src, [i + k]);
               const ep = await doc.embedPage(sp);
               const c = k % cols, r = Math.floor(k / cols);
-              const x = gap + c * (cellW + gap);
-              const y = srcSize.height - gap - (r + 1) * cellH - r * gap;
-              page.drawPage(ep, { x, y, width: cellW, height: cellH });
+              // 2 合 1 的格子是整页宽、半页高；同时传 width/height 会把内容纵向压扁，
+              // 必须按同一比例缩放并在格子内居中。
+              const k2 = Math.min(cellW / ep.width, cellH / ep.height);
+              const dw = ep.width * k2, dh = ep.height * k2;
+              const cellX = gap + c * (cellW + gap);
+              const cellY = srcSize.height - gap - (r + 1) * cellH - r * gap;
+              page.drawPage(ep, {
+                x: cellX + (cellW - dw) / 2,
+                y: cellY + (cellH - dh) / 2,
+                width: dw, height: dh,
+              });
             }
           }
           out.push({ name: `${baseName(file.name)}_${per}合1.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf') });
@@ -5176,8 +5226,10 @@
           cv.height = swap ? src.width : src.height;
           const c = cv.getContext('2d');
           c.translate(cv.width / 2, cv.height / 2);
-          c.rotate(angle * Math.PI / 180);
+          // 先翻转后旋转：canvas 后调用的变换先作用于绘制坐标，
+          // 若先 rotate 再 scale，翻转轴会跟着图片一起转，90°/270° 时水平翻转会变成垂直翻转。
           c.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+          c.rotate(angle * Math.PI / 180);
           c.drawImage(src, -src.width / 2, -src.height / 2);
           const blob = await canvasToBlob(cv, 'image/png');
           out.push({ name: `${baseName(ctx.files[i].name)}_旋转.png`, blob });
@@ -5305,7 +5357,13 @@
             const w = item.width * scale, h = item.height * scale;
             const left = (idx % cols) * (cellW + gap);
             const top = Math.floor(idx / cols) * (cellH + gap);
+            // cover 时绘制区域大于单元格，必须裁剪，否则会溢到间距和相邻单元格上。
+            c.save();
+            c.beginPath();
+            c.rect(left, top, cellW, cellH);
+            c.clip();
             c.drawImage(item, left + (cellW - w) / 2, top + (cellH - h) / 2, w, h);
+            c.restore();
           });
         } else if (vertical) {
           cv.width = Math.max(...canvases.map(c => c.width));
@@ -6100,7 +6158,8 @@
         const mm = v => Math.max(1, Math.round(v / 25.4 * dpi));
         const pw = mm(spec.w), ph = mm(spec.h);
         const PW = mm(paper.w), PH = mm(paper.h);
-        const gap = mm(Math.max(0, parseFloat(ctx.get('gap')) || 0));
+        // 间距允许为 0（紧贴排版），不能套用 mm() 的最小 1px 限制。
+        const gap = Math.max(0, Math.round((parseFloat(ctx.get('gap')) || 0) / 25.4 * dpi));
         if (PW * PH > 40000000) throw new Error('纸张尺寸过大，请降低 DPI 或换小纸张');
         const cols = Math.max(1, Math.floor((PW + gap) / (pw + gap)));
         const rows = Math.max(1, Math.floor((PH + gap) / (ph + gap)));
@@ -6108,8 +6167,11 @@
         const wanted = Math.max(0, parseInt(ctx.get('count'), 10) || 0);
         const total = wanted ? Math.min(wanted, capacity) : capacity;
         if (!total) throw new Error('当前规格无法在所选纸张上排版，请降低 DPI 或换大纸张');
-        const gridW = cols * pw + (cols - 1) * gap;
-        const gridH = rows * ph + (rows - 1) * gap;
+        // 张数不满一整行时按实际占用的行列居中，否则照片块会偏半个单元格。
+        const usedCols = Math.min(cols, total);
+        const usedRows = Math.ceil(total / cols);
+        const gridW = usedCols * pw + (usedCols - 1) * gap;
+        const gridH = usedRows * ph + (usedRows - 1) * gap;
         const ox = Math.round((PW - gridW) / 2);
         const oy = Math.round((PH - gridH) / 2);
         const bgMode = ctx.get('bg') || 'keep';
@@ -6581,9 +6643,10 @@
             ctx.progress(k, pages.length, `正在添加文字 ${k + 1}/${pages.length}…`);
             const page = doc.getPage(pages[k] - 1);
             const { width, height } = page.getSize();
+            // 选项约定为「下 0 上 100」，而 PDF 原点就在左下，故 y 直接按百分比取值。
             page.drawImage(img, {
               x: width * xPct / 100 - w / 2,
-              y: height * (1 - yPct / 100) - h / 2,
+              y: height * yPct / 100 - h / 2,
               width: w, height: h, opacity,
             });
           }
@@ -6623,9 +6686,10 @@
             const { width, height } = page.getSize();
             const w = width * widthPct;
             const h = w * (img.height / img.width);
+            // 选项约定为「下 0 上 100」，而 PDF 原点就在左下，故 y 直接按百分比取值。
             page.drawImage(img, {
               x: width * xPct / 100 - w / 2,
-              y: height * (1 - yPct / 100) - h / 2,
+              y: height * yPct / 100 - h / 2,
               width: w, height: h, opacity,
             });
           }
@@ -6941,9 +7005,11 @@ ${rows}</body></html>`;
         { key: 'prefix', type: 'text', label: '文件名前缀', def: '', placeholder: '如：合同_' },
       ],
       async run(ctx) {
-        const prefix = ctx.get('prefix') || '';
+        const rawPrefix = String(ctx.get('prefix') || '').trim();
+        const prefix = rawPrefix ? sanitizeFileName(rawPrefix) : '';
         const source = ctx.get('source');
         const out = [];
+        const used = new Set();
         for (let i = 0; i < ctx.files.length; i++) {
           const file = ctx.files[i];
           ctx.progress(i, ctx.files.length, `正在命名 ${i + 1}/${ctx.files.length}…`);
@@ -6955,9 +7021,21 @@ ${rows}</body></html>`;
             const lines = await extractPdfLines(file);
             name = (lines.find(l => !/^---/.test(l) && l.trim()) || '').trim();
           }
-          const clean = (name && name.trim()) ? sanitizeFileName(name) : baseName(file.name);
+          // 标题常自带扩展名（如“合同2024.pdf”），先剥掉再拼 .pdf，避免出现 .pdf.pdf。
+          const derived = (name && name.trim())
+            ? String(name).trim().replace(/\.(pdf|docx?|xlsx?|pptx?|txt|rtf|md|jpe?g|png|gif|bmp|tiff?)$/i, '')
+            : baseName(file.name);
+          let stem = sanitizeFileName(prefix + derived);
+          // 多份文档标题相同，或两个文件解析出同一名称时追加序号，避免打包下载互相覆盖。
+          if (used.has(stem.toLowerCase())) {
+            const base = stem;
+            let n = 2;
+            while (used.has(`${base}_${n}`.toLowerCase())) n++;
+            stem = `${base}_${n}`;
+          }
+          used.add(stem.toLowerCase());
           const bytes = await file.arrayBuffer();
-          out.push({ name: `${prefix}${clean}.pdf`, blob: bytesToBlob(bytes, 'application/pdf') });
+          out.push({ name: `${stem}.pdf`, blob: bytesToBlob(bytes, 'application/pdf') });
         }
         return out;
       }
@@ -6995,6 +7073,16 @@ ${rows}</body></html>`;
           out.push({ name: `${baseName(pdfFile.name)}_带附件.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf'), meta: `已嵌入 ${attachFiles.length} 个附件` });
           return out;
         }
+        // 多个 PDF 可能内嵌同名附件（如都叫“报价单.xlsx”），必须带来源并去重，
+        // 否则结果列表打包下载时会互相覆盖、静默丢文件。
+        const usedNames = new Set();
+        const uniqueName = (stem, ext) => {
+          let name = `${stem}${ext}`;
+          let n = 2;
+          while (usedNames.has(name.toLowerCase())) name = `${stem}_${n++}${ext}`;
+          usedNames.add(name.toLowerCase());
+          return name;
+        };
         for (const file of ctx.files) {
           if (!/\.pdf$/i.test(file.name)) continue;
           const doc = await loadPdfDoc(file);
@@ -7004,8 +7092,12 @@ ${rows}</body></html>`;
               out.push({ name: `${baseName(file.name)}_无附件.txt`, blob: new Blob(['该 PDF 无内嵌附件。'], { type: 'text/plain' }) });
             } else {
               for (const att of files) {
+                const rawName = String(att.name || '附件');
+                const dot = rawName.lastIndexOf('.');
+                const ext = dot > 0 ? rawName.slice(dot) : '';
+                const stem = sanitizeFileName(`${baseName(file.name)}_${dot > 0 ? rawName.slice(0, dot) : rawName}`);
                 out.push({
-                  name: `附件_${sanitizeFileName(att.name)}`,
+                  name: uniqueName(stem, ext),
                   blob: bytesToBlob(att.bytes, 'application/octet-stream'),
                   meta: formatBytes(att.bytes.length),
                 });
@@ -7105,7 +7197,8 @@ ${rows}</body></html>`;
           for (const it of items) (byPage[it.page] = byPage[it.page] || []).push(it);
           const sheets = Object.keys(byPage).map(pn => {
             const list = byPage[pn];
-            const rowYs = clusterIdx(list.map(i => i.y), 4);
+            // PDF 坐标原点在左下、y 向上增长；取负号后再聚类，得到自顶向下的行序。
+            const rowYs = clusterIdx(list.map(i => -i.y), 4).map(v => -v);
             const colXs = clusterIdx(list.map(i => i.x), 8);
             const grid = rowYs.map(ry => {
               const rowItems = list.filter(i => Math.abs(i.y - ry) <= 4);
@@ -7178,33 +7271,38 @@ ${rows}</body></html>`;
           ctx.progress(0, 1, `正在转换 ${file.name}…`);
           const sheets = await parseXlsxFile(file);
           const doc = await PDFLib.PDFDocument.create();
-          const PW = 842, PH = 595, colW = 110, rowH = 24, perPage = Math.floor((PH - 70) / rowH);
+          const PW = 842, PH = 595, colW = 110, rowH = 24, MARGIN = 24;
+          const perPage = Math.floor((PH - 70) / rowH);
+          // 列数超出纸张宽度时必须横向分页，否则第 8 列起被画布裁掉、数据静默丢失。
+          const colsPerPage = Math.max(1, Math.floor((PW - MARGIN * 2) / colW));
           for (const sheet of sheets) {
             const cols = sheet.grid.reduce((m, r) => Math.max(m, r.length), 1);
             for (let r0 = 0; r0 < Math.max(1, sheet.grid.length); r0 += perPage) {
-              const { cv, c, scale } = makeOfficeCanvas(PW, PH);
-              c.fillStyle = '#000';
-              c.font = 'bold 22px "Microsoft YaHei", sans-serif';
-              c.fillText(sheet.name, 24 * scale, 36 * scale);
-              for (let ri = 0; ri < perPage && r0 + ri < sheet.grid.length; ri++) {
-                const row = sheet.grid[r0 + ri] || [];
-                const y = 56 + ri * rowH;
-                for (let ci = 0; ci < cols; ci++) {
-                  const x = 24 + ci * colW;
-                  c.strokeStyle = '#999';
-                  c.lineWidth = 1;
-                  c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
-                  const txt = String(row[ci] || '').slice(0, 14);
-                  if (txt) {
-                    c.fillStyle = '#000';
-                    c.font = '20px "Microsoft YaHei", sans-serif';
-                    c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+              for (let c0 = 0; c0 < Math.max(1, cols); c0 += colsPerPage) {
+                const { cv, c, scale } = makeOfficeCanvas(PW, PH);
+                c.fillStyle = '#000';
+                c.font = 'bold 22px "Microsoft YaHei", sans-serif';
+                c.fillText(sheet.name, MARGIN * scale, 36 * scale);
+                for (let ri = 0; ri < perPage && r0 + ri < sheet.grid.length; ri++) {
+                  const row = sheet.grid[r0 + ri] || [];
+                  const y = 56 + ri * rowH;
+                  for (let ci = c0; ci < Math.min(cols, c0 + colsPerPage); ci++) {
+                    const x = MARGIN + (ci - c0) * colW;
+                    c.strokeStyle = '#999';
+                    c.lineWidth = 1;
+                    c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
+                    const txt = String(row[ci] || '').slice(0, 14);
+                    if (txt) {
+                      c.fillStyle = '#000';
+                      c.font = '20px "Microsoft YaHei", sans-serif';
+                      c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+                    }
                   }
                 }
+                const png = await canvasToBlob(cv, 'image/png');
+                const page = doc.addPage([PW, PH]);
+                page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
               }
-              const png = await canvasToBlob(cv, 'image/png');
-              const page = doc.addPage([PW, PH]);
-              page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
             }
           }
           out.push({ name: `${baseName(file.name)}.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf') });
@@ -7392,11 +7490,12 @@ ${rows}</body></html>`;
           let x = 0, y = 0;
           for (const cv of canvases) {
             const dw = cv.width * shrink, dh = cv.height * shrink;
+            // 页面尺寸不一致时居中，避免一侧贴边、另一侧留下大片空白。
             if (vertical) {
-              c.drawImage(cv, 0, y, dw, dh);
+              c.drawImage(cv, (big.width - dw) / 2, y, dw, dh);
               y += dh;
             } else {
-              c.drawImage(cv, x, 0, dw, dh);
+              c.drawImage(cv, x, (big.height - dh) / 2, dw, dh);
               x += dw;
             }
           }
@@ -7486,7 +7585,8 @@ ${rows}</body></html>`;
           const parts = [];
           Object.keys(byPage).forEach((pn, idx) => {
             const list = byPage[pn];
-            const rowYs = clusterIdx(list.map(i => i.y), 4);
+            // PDF 坐标原点在左下、y 向上增长；取负号后再聚类，得到自顶向下的行序。
+            const rowYs = clusterIdx(list.map(i => -i.y), 4).map(v => -v);
             const colXs = clusterIdx(list.map(i => i.x), 8);
             if (idx > 0) parts.push('');
             rowYs.forEach(ry => {
@@ -7908,23 +8008,38 @@ ${rows}</body></html>`;
             paras = [];
             const dom = new DOMParser().parseFromString(text, 'text/html');
             const BLOCK_CHILDREN = 'p,div,section,article,header,footer,main,aside,ul,ol,li,table,tr,td,th,blockquote,pre,h1,h2,h3,h4,h5,h6';
+            const inlineBuf = [];
+            const pushPara = text => {
+              const t = (text || '').replace(/\s+/g, ' ').trim();
+              if (t) paras.push({ text: t, size: fontSize });
+            };
+            const flushInline = () => {
+              if (!inlineBuf.length) return;
+              pushPara(inlineBuf.join(' '));
+              inlineBuf.length = 0;
+            };
             const walk = el => {
-              for (const child of Array.from(el.children || [])) {
-                const tag = (child.tagName || '').toLowerCase();
+              for (const node of Array.from(el.childNodes || [])) {
+                // body 直接包裹的裸文本也是正文，不能只遍历元素子节点。
+                if (node.nodeType === 3) { if ((node.nodeValue || '').trim()) inlineBuf.push(node.nodeValue); continue; }
+                if (node.nodeType !== 1) continue;
+                const tag = (node.tagName || '').toLowerCase();
                 if (tag === 'script' || tag === 'style' || tag === 'head') continue;
-                // 只有包含块级子元素时才继续展开；内联子元素（<b>/<span>/<a> 等）
-                // 的文本属于当前段落，必须整段读取，否则 "Hello <b>World</b>" 会丢掉前半句。
-                const hasBlockChild = child.querySelector && child.querySelector(BLOCK_CHILDREN);
-                if (hasBlockChild) { walk(child); continue; }
-                const t = (child.textContent || '').replace(/\s+/g, ' ').trim();
+                const hasBlockChild = node.querySelector && node.querySelector(BLOCK_CHILDREN);
+                if (hasBlockChild) { flushInline(); walk(node); continue; }
+                const t = (node.textContent || '').replace(/\s+/g, ' ').trim();
                 if (!t) continue;
+                // 内联元素（<b>/<span>/<a> 等）要和相邻裸文本拼成同一段落。
+                if (!node.matches || !node.matches(BLOCK_CHILDREN)) { inlineBuf.push(t); continue; }
+                flushInline();
                 const h = tag.match(/^h([1-6])$/);
                 if (h) { paras.push({ text: t, bold: true, size: Math.max(12, 24 - parseInt(h[1], 10) * 2) }); continue; }
                 if (tag === 'li') { paras.push({ text: '• ' + t, size: fontSize }); continue; }
-                paras.push({ text: t, size: fontSize });
+                pushPara(t);
               }
             };
             walk(dom.body || dom.documentElement);
+            flushInline();
             if (!paras.length) paras = [{ text: text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), size: fontSize }];
           } else if (isMd) {
             paras = [];
@@ -10779,17 +10894,14 @@ ${rows}</body></html>`;
       const note = rec.error || (rec.from_qr ? '来自二维码解析' : (rec.from_filename ? '号码来自文件名' : ''));
       const badge = rec.from_cache ? '<span class="bill-cache-badge">缓存</span>' : '';
       const count = (rec.invoices || []).length;
-      const type = count > 1 ? `${rec.invoice_type || ''} 等${count}张` : (rec.invoice_type || '—');
       const number = count > 1 && rec.invoice_number ? `${rec.invoice_number} 等${count}张` : (rec.invoice_number || '—');
       return `<tr data-index="${i}" title="${escapeHtml(note)}">
         <td>${i + 1}</td>
         <td class="bill-ellipsis" title="${escapeHtml(rec.file_name)}">${escapeHtml(rec.file_name)}</td>
         <td class="bill-ellipsis bill-preview" title="${escapeHtml(preview)}">${escapeHtml(preview)}</td>
-        <td>${escapeHtml(type)}</td><td class="bill-mono">${escapeHtml(number)}</td>
+        <td class="bill-mono">${escapeHtml(number)}</td>
         <td>${escapeHtml(rec.invoice_date || '—')}</td>
         <td class="bill-num">${showAmount ? '¥' + billFormatAmount(rec.amount) : '—'}</td>
-        <td class="bill-ellipsis" title="${escapeHtml(rec.buyer || '')}">${escapeHtml(rec.buyer || '—')}</td>
-        <td class="bill-ellipsis" title="${escapeHtml(rec.seller || '')}">${escapeHtml(rec.seller || '—')}</td>
         <td><span class="bill-status ${billStatusInfo(rec.status)}">${escapeHtml(rec.status)}</span>${badge}</td>
         <td class="bill-actions-col"><button class="bill-row-detail-btn" type="button" data-detail="${i}" aria-label="查看第 ${i + 1} 个文件详情">详情</button></td>
       </tr>`;
@@ -11244,7 +11356,10 @@ ${rows}</body></html>`;
     let html = `<div class="bill-detail-meta"><span>状态：<strong>${escapeHtml(rec.status)}</strong></span>
       <span>类型：<strong>${escapeHtml(rec.invoice_type || '-')}</strong></span>
       <span>发票号码：<strong>${escapeHtml(rec.invoice_number || '-')}</strong></span>
+      <span>开票日期：<strong>${escapeHtml(rec.invoice_date || '-')}</strong></span>
       <span>金额：<strong>¥${billFormatAmount(rec.amount)}</strong></span>
+      <span>购买方：<strong>${escapeHtml(rec.buyer || '-')}</strong></span>
+      <span>销售方：<strong>${escapeHtml(rec.seller || '-')}</strong></span>
       <span>页数：<strong>${rec.page_count || '-'}</strong></span></div>`;
     if (rec.error) html += `<p class="bill-result-error">${escapeHtml(rec.error)}</p>`;
     const invoices = rec.invoices || [];

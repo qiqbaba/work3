@@ -35,9 +35,10 @@
             ctx.progress(k, pages.length, `正在添加文字 ${k + 1}/${pages.length}…`);
             const page = doc.getPage(pages[k] - 1);
             const { width, height } = page.getSize();
+            // 选项约定为「下 0 上 100」，而 PDF 原点就在左下，故 y 直接按百分比取值。
             page.drawImage(img, {
               x: width * xPct / 100 - w / 2,
-              y: height * (1 - yPct / 100) - h / 2,
+              y: height * yPct / 100 - h / 2,
               width: w, height: h, opacity,
             });
           }

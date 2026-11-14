@@ -453,8 +453,8 @@
             </div>
             <div class="bill-table-wrap">
               <table class="bill-data-table"><thead><tr>
-                <th class="bill-col-index">#</th><th>原文件名</th><th>新文件名</th><th>类型</th><th>发票号码</th>
-                <th>开票日期</th><th class="bill-num">金额</th><th>购买方</th><th>销售方</th><th>状态</th><th>操作</th>
+                <th class="bill-col-index">#</th><th>原文件名</th><th>新文件名</th><th>发票号码</th>
+                <th>开票日期</th><th class="bill-num">金额</th><th>状态</th><th>操作</th>
               </tr></thead><tbody id="bill-invoice-table-body"></tbody></table>
             </div>
             <div id="bill-invoice-mobile-list" class="bill-mobile-invoice-list"></div>
@@ -866,8 +866,11 @@
         });
       });
 
+      // 本机（localhost / 回环地址）就是源码运行所在机器，无需再引导安装离线版；
+      // 局域网其它设备首次访问仍弹窗询问，右上角手动入口也始终可用。
+      var isLoopback = /^(localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i.test(location.hostname);
       // 首次访问只弹窗询问，绝不自动下载；用户做出选择后不再重复打扰。
-      if (!getDecision() && !window.__ENABLE_TEST_HOOKS__ && !navigator.webdriver) {
+      if (!isLoopback && !getDecision() && !window.__ENABLE_TEST_HOOKS__ && !navigator.webdriver) {
         setTimeout(function () {
           if (!getDecision() && installPrompt.hidden) openInstallPrompt();
         }, 900);

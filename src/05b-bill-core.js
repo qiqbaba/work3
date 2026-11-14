@@ -1015,7 +1015,7 @@
   function billCellText(v) {
     if (v == null) return '';
     if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(v);
-    return String(v).replace(/\u3000/g, ' ').trim();
+    return String(v).replace(/^\ufeff/, '').replace(/\u3000/g, ' ').trim();
   }
   function billIsInvoiceLike(text) {
     if (!text || text.length > 40 || BILL_SKIP_WORDS.has(text)) return false;
@@ -1031,8 +1031,25 @@
     const name = String(file.name || '').toLowerCase();
     if (/\.(xlsx|xlsm)$/.test(name)) return parseXlsxFile(file);
     if (/\.(csv|txt)$/.test(name)) {
-      const text = await file.text();
-      const grid = text.split(/\r?\n/).map(line => line.split(/[,\t;，]/).map(s => s.trim()));
+      // Excel 导出的 CSV 常带 UTF-8 BOM，备注字段也可能含逗号/引号；
+      // 简单 split 会吞掉首个号码或把一列拆成两列，导致候选列识别错乱。
+      const text = (await file.text()).replace(/^\ufeff/, '');
+      const grid = text.split(/\r?\n/).map(line => {
+        const cells = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (inQ) {
+            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+            else if (ch === '"') inQ = false;
+            else cur += ch;
+          } else if (ch === '"') inQ = true;
+          else if (/[,;\t，]/.test(ch)) { cells.push(cur.trim()); cur = ''; }
+          else cur += ch;
+        }
+        cells.push(cur.trim());
+        return cells;
+      });
       return [{ name: baseName(file.name), grid }];
     }
     if (/\.xls$/.test(name)) {

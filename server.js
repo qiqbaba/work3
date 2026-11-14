@@ -6,6 +6,7 @@
  *   node server.js --port 9000        换端口；端口被占用时自动顺延，install.bat 会带上实际地址
  *   node server.js --no-watch         不监听源码变化
  *   node server.js --no-build         不执行构建，仅用现有产物提供服务
+ *   node server.js --open             监听成功后自动用系统默认浏览器打开本机页面
  *
  * 与客户端安装 / 更新链路的约定：
  *   /version.json                    最新构建清单，客户端据此判断是否有新版本
@@ -23,7 +24,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { spawnSync } = require('child_process');
+const { spawnSync, exec } = require('child_process');
 
 const ROOT = __dirname;
 const BUILDER = path.join(ROOT, 'build_single.js');
@@ -66,6 +67,8 @@ const HELP = `用法: node server.js [选项]
   --watch            监听源码变化并自动重建（默认开启）
   --no-watch         关闭监听
   --no-build         启动时不执行构建
+  --open             监听成功后自动打开系统默认浏览器（默认关闭）
+  --no-open          不自动打开浏览器
   -h, --help         显示本说明`;
 
 function parseArgs(argv) {
@@ -74,6 +77,7 @@ function parseArgs(argv) {
     host: process.env.HOST || '0.0.0.0',
     watch: true,
     build: true,
+    open: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -85,6 +89,8 @@ function parseArgs(argv) {
     else if (a === '--watch') opts.watch = true;
     else if (a === '--no-watch') opts.watch = false;
     else if (a === '--no-build') opts.build = false;
+    else if (a === '--open') opts.open = true;
+    else if (a === '--no-open') opts.open = false;
     else throw new Error(`未知参数: ${a}\n${HELP}`);
   }
   if (!Number.isInteger(opts.port) || opts.port < 1 || opts.port > 65535) {
@@ -261,6 +267,17 @@ function createServer() {
   });
 }
 
+/** 用系统默认浏览器打开页面；URL 仅由本机地址与实际端口拼成，失败不影响服务。 */
+function openBrowser(url) {
+  const cmd = process.platform === 'win32' ? `start "" "${url}"`
+    : process.platform === 'darwin' ? `open "${url}"`
+    : `xdg-open "${url}"`;
+  exec(cmd, err => {
+    if (err) console.warn(`[浏览器] 自动打开失败：${err.message}；请手动访问 ${url}`);
+    else console.log(`[浏览器] 已自动打开 ${url}`);
+  });
+}
+
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.build) build();
@@ -286,7 +303,17 @@ function main() {
     stopWatch();
     process.exit(1);
   });
-  server.on('listening', () => printBanner(opts, version, server.address().port));
+  let opened = false;
+  server.on('listening', () => {
+    const port = server.address().port;
+    printBanner(opts, version, port);
+    if (opts.open && !opened) {
+      opened = true;
+      const host = opts.host === '0.0.0.0' || opts.host === '::' ? '127.0.0.1'
+        : opts.host.includes(':') ? `[${opts.host}]` : opts.host;
+      openBrowser(`http://${host}:${port}/`);
+    }
+  });
   server.listen(opts.port, opts.host);
 
   const shutdown = () => {

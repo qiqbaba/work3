@@ -477,17 +477,14 @@
       const note = rec.error || (rec.from_qr ? '来自二维码解析' : (rec.from_filename ? '号码来自文件名' : ''));
       const badge = rec.from_cache ? '<span class="bill-cache-badge">缓存</span>' : '';
       const count = (rec.invoices || []).length;
-      const type = count > 1 ? `${rec.invoice_type || ''} 等${count}张` : (rec.invoice_type || '—');
       const number = count > 1 && rec.invoice_number ? `${rec.invoice_number} 等${count}张` : (rec.invoice_number || '—');
       return `<tr data-index="${i}" title="${escapeHtml(note)}">
         <td>${i + 1}</td>
         <td class="bill-ellipsis" title="${escapeHtml(rec.file_name)}">${escapeHtml(rec.file_name)}</td>
         <td class="bill-ellipsis bill-preview" title="${escapeHtml(preview)}">${escapeHtml(preview)}</td>
-        <td>${escapeHtml(type)}</td><td class="bill-mono">${escapeHtml(number)}</td>
+        <td class="bill-mono">${escapeHtml(number)}</td>
         <td>${escapeHtml(rec.invoice_date || '—')}</td>
         <td class="bill-num">${showAmount ? '¥' + billFormatAmount(rec.amount) : '—'}</td>
-        <td class="bill-ellipsis" title="${escapeHtml(rec.buyer || '')}">${escapeHtml(rec.buyer || '—')}</td>
-        <td class="bill-ellipsis" title="${escapeHtml(rec.seller || '')}">${escapeHtml(rec.seller || '—')}</td>
         <td><span class="bill-status ${billStatusInfo(rec.status)}">${escapeHtml(rec.status)}</span>${badge}</td>
         <td class="bill-actions-col"><button class="bill-row-detail-btn" type="button" data-detail="${i}" aria-label="查看第 ${i + 1} 个文件详情">详情</button></td>
       </tr>`;
@@ -942,7 +939,10 @@
     let html = `<div class="bill-detail-meta"><span>状态：<strong>${escapeHtml(rec.status)}</strong></span>
       <span>类型：<strong>${escapeHtml(rec.invoice_type || '-')}</strong></span>
       <span>发票号码：<strong>${escapeHtml(rec.invoice_number || '-')}</strong></span>
+      <span>开票日期：<strong>${escapeHtml(rec.invoice_date || '-')}</strong></span>
       <span>金额：<strong>¥${billFormatAmount(rec.amount)}</strong></span>
+      <span>购买方：<strong>${escapeHtml(rec.buyer || '-')}</strong></span>
+      <span>销售方：<strong>${escapeHtml(rec.seller || '-')}</strong></span>
       <span>页数：<strong>${rec.page_count || '-'}</strong></span></div>`;
     if (rec.error) html += `<p class="bill-result-error">${escapeHtml(rec.error)}</p>`;
     const invoices = rec.invoices || [];

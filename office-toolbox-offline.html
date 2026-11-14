@@ -24,34 +24,40 @@
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  --bg-page: #f7f8fa;
+  --bg-page: #f5f6f8;
   --bg-surface: #ffffff;
-  --bg-subtle: #f1f2f4;
-  --border-color: #e6e8ec;
-  --border-strong: #d2d6dd;
-  --text-primary: #1b1e24;
-  --text-secondary: #5b626d;
-  --text-muted: #8b919b;
-  --primary: #242a33;
-  --primary-strong: #10141a;
+  --bg-subtle: #f0f2f4;
+  --border-color: #e4e7eb;
+  --border-strong: #cdd2d9;
+  --text-primary: #171a20;
+  --text-secondary: #59616d;
+  --text-muted: #858d99;
+  --primary: #20262f;
+  --primary-strong: #0d1117;
   --on-primary: #ffffff;
-  --accent-soft: #eff0f2;
+  --accent-soft: #eef0f3;
   --danger: #b4443f;
   --danger-soft: #f8eeee;
   --success: #3f7355;
   --success-soft: #ecf4ef;
   --warning: #8a6a2f;
   --warning-soft: #f7f2e7;
-  --shadow-sm: 0 1px 2px rgba(20, 24, 32, 0.04);
-  --shadow-md: 0 1px 3px rgba(20, 24, 32, 0.04), 0 8px 24px rgba(20, 24, 32, 0.05);
-  --shadow-lg: 0 16px 44px rgba(20, 24, 32, 0.12);
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.03);
+  --shadow-md: 0 2px 6px rgba(16, 24, 40, 0.03), 0 12px 32px rgba(16, 24, 40, 0.07);
+  --shadow-lg: 0 24px 64px rgba(16, 24, 40, 0.14);
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-full: 999px;
-  --transition-normal: 0.18s ease;
-  --focus-ring: 0 0 0 3px rgba(36, 42, 51, 0.14);
+  --header-h: 72px;
+  --overlay: rgba(16, 24, 40, 0.28);
+  --overlay-strong: rgba(16, 24, 40, 0.88);
+  --paper: #ffffff;
+  --on-dark: #edf0f4;
+  --transition-normal: 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --focus-ring: 0 0 0 4px rgba(32, 38, 47, 0.1);
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -90,28 +96,31 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg-page: #0f1115;
-  --bg-surface: #171a20;
-  --bg-subtle: #1e222a;
-  --border-color: #2b303a;
-  --border-strong: #3b424e;
-  --text-primary: #eceef2;
-  --text-secondary: #aeb4bf;
-  --text-muted: #7d8591;
-  --primary: #e8ebf0;
+  --bg-page: #0d0f12;
+  --bg-surface: #15181d;
+  --bg-subtle: #1c2026;
+  --border-color: #282d35;
+  --border-strong: #3a414c;
+  --text-primary: #edf0f4;
+  --text-secondary: #a8b0bb;
+  --text-muted: #7c8592;
+  --primary: #e9edf2;
   --primary-strong: #ffffff;
-  --on-primary: #14171d;
-  --accent-soft: #22262e;
+  --on-primary: #11151a;
+  --accent-soft: #20252c;
   --danger: #e08a84;
   --danger-soft: #33201f;
   --success: #8bc4a3;
   --success-soft: #182b22;
   --warning: #d8b878;
   --warning-soft: #2c2618;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.28), 0 8px 24px rgba(0, 0, 0, 0.22);
-  --shadow-lg: 0 16px 44px rgba(0, 0, 0, 0.42);
-  --focus-ring: 0 0 0 3px rgba(232, 235, 240, 0.18);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.2), 0 16px 36px rgba(0, 0, 0, 0.26);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.46);
+  --overlay: rgba(0, 0, 0, 0.62);
+  --overlay-strong: rgba(0, 0, 0, 0.88);
+  --paper: #e6e9ed;
+  --focus-ring: 0 0 0 4px rgba(233, 237, 242, 0.14);
   --cat-pdf: #cf8e9d;
   --cat-pdf-soft: #302126;
   --cat-img: #79bdb3;
@@ -168,7 +177,7 @@ html {
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 /* 尊重系统「减少动态效果」设置 */
@@ -187,10 +196,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   background: var(--bg-page);
   color: var(--text-primary);
-  line-height: 1.55;
+  line-height: 1.6;
   letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -205,15 +215,16 @@ body.lightbox-open {
 
 .container {
   width: 100%;
-  max-width: 1160px;
+  /* 宽屏下让工具网格铺开，避免 1920px 窗口两侧留下大块空白 */
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
 }
 
 code {
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 0.1em 0.45em;
   font-size: 0.85em;
   font-family: "Cascadia Code", Consolas, monospace;
@@ -239,25 +250,23 @@ code {
 
 /* ============ Header ============ */
 .app-header {
-  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(14px) saturate(1.3);
-  -webkit-backdrop-filter: blur(14px) saturate(1.3);
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.25rem;
-  height: 68px;
+  gap: 1rem;
+  height: var(--header-h);
   /* 与 .container 使用同一基准宽度，头部品牌与正文左边缘对齐 */
-  max-width: 1160px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
 }
 
 .brand-section {
@@ -269,8 +278,8 @@ code {
 }
 
 .brand-mark {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -283,6 +292,7 @@ code {
 .brand-mark .icon {
   width: 17px;
   height: 17px;
+  stroke-width: 1.8;
 }
 
 /* 深色主题下标识不再使用高对比反色块，避免抢走正文的视觉重心 */
@@ -400,11 +410,11 @@ code {
   gap: 0.6rem;
   min-width: 0;
   flex: 1 1 auto;
-  max-width: 360px;
-  background: var(--bg-subtle);
+  max-width: 340px;
+  background: color-mix(in srgb, var(--bg-subtle) 78%, transparent);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-full);
+  padding: 0.55rem 0.9rem;
   transition: border-color var(--transition-normal), box-shadow var(--transition-normal), background var(--transition-normal);
   color: var(--text-muted);
 }
@@ -469,7 +479,7 @@ code {
 .search-shortcut {
   flex-shrink: 0;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-muted);
   padding: 0 0.35rem;
@@ -540,8 +550,8 @@ code {
 /* ============ Tool Grid ============ */
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr));
-  gap: 1.125rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
   margin-bottom: 3rem;
 }
 
@@ -551,24 +561,28 @@ code {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  margin-top: 2.6rem;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid var(--border-color);
+  margin-top: 3rem;
+  padding-bottom: 0.25rem;
 }
 .tool-group-heading:first-child {
   margin-top: 0;
 }
 .tool-group-title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--fs-lg);
+  font-weight: 650;
   color: var(--text-primary);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.015em;
 }
 .tool-group-count {
   font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+.tool-group-heading .tool-group-count {
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
 }
 
 /* 功能簇小标题：同一分类内按用途再次分组，防止 54 张卡片连成一片 */
@@ -587,7 +601,7 @@ code {
   content: "";
   width: 2px;
   height: 10px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--border-strong);
 }
 
@@ -606,14 +620,14 @@ code {
 
 .tool-card-main {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.65rem;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
   width: 100%;
   height: 100%;
-  min-height: 9rem;
-  padding: 1.25rem;
+  min-height: 4.5rem;
+  padding: 0.85rem 1rem;
   border: 0;
   background: transparent;
   color: inherit;
@@ -622,13 +636,14 @@ code {
   cursor: pointer;
 }
 
-/* 名称 + 说明作为一个整体：桌面仍竖排，窄屏可与图标并排 */
+/* 图标与文案横向并排，消除卡片内部的大块纵向留白 */
 .tool-card-text {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.65rem;
-  width: 100%;
+  gap: 0.25rem;
+  width: auto;
   min-width: 0;
 }
 
@@ -639,6 +654,7 @@ code {
 }
 
 .tool-icon {
+  flex: 0 0 auto;
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
@@ -674,6 +690,7 @@ code {
   line-height: 1.4;
   letter-spacing: -0.005em;
   overflow-wrap: anywhere;
+  padding-right: 1.75rem;
 }
 
 .tool-desc {
@@ -694,7 +711,7 @@ code {
 
 .search-match {
   padding: 0 1px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--warning) 16%, transparent);
   color: inherit;
 }
@@ -765,7 +782,7 @@ code {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   padding: 1.75rem;
   margin-bottom: 1.75rem;
 }
@@ -775,6 +792,7 @@ code {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  min-height: 42px;
   font-size: var(--fs-base);
   font-weight: 550;
   padding: 0.65rem 1.25rem;
@@ -789,6 +807,7 @@ code {
 .btn-primary {
   background: var(--primary);
   color: var(--on-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -870,12 +889,12 @@ code {
 
 /* ============ Dropzone ============ */
 .dropzone {
-  border: 2px dashed var(--border-color);
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
-  padding: 1.9rem 1.25rem;
+  padding: 2.25rem 1.25rem;
   text-align: center;
   cursor: pointer;
-  background: var(--bg-subtle);
+  background: color-mix(in srgb, var(--bg-subtle) 65%, transparent);
   transition: border-color var(--transition-normal), background var(--transition-normal);
 }
 
@@ -1047,13 +1066,13 @@ body.is-task-busy .cat-chip {
 .ws-title-row {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .ws-icon {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1061,14 +1080,15 @@ body.is-task-busy .cat-chip {
 }
 
 .ws-icon .icon {
-  width: 26px;
-  height: 26px;
+  width: 25px;
+  height: 25px;
 }
 
 .ws-title {
-  font-size: var(--fs-xl);
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-size: 1.75rem;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
 }
 
 .ws-desc {
@@ -1254,7 +1274,7 @@ body.is-task-busy .cat-chip {
   flex-shrink: 0;
   padding: 0;
   border: 1px solid var(--border-color);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--bg-surface);
   overflow: hidden;
   cursor: zoom-in;
@@ -1278,7 +1298,7 @@ body.is-task-busy .cat-chip {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #fff;
+  background: var(--paper);
 }
 
 .file-item .file-pages {
@@ -1398,7 +1418,7 @@ body.is-task-busy .cat-chip {
 .file-list.is-grid .file-thumb {
   width: 100%;
   height: 210px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 .file-list.is-grid .file-info {
@@ -1586,7 +1606,7 @@ body.is-task-busy .cat-chip {
 .setting-group.has-error .setting-input:focus,
 .setting-group.has-error .setting-select:focus,
 .setting-group.has-error .setting-textarea:focus {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+  border-color: var(--danger);
 }
 
 .settings-section-heading {
@@ -1603,7 +1623,7 @@ body.is-task-busy .cat-chip {
   content: "";
   width: 3px;
   height: 13px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--primary);
 }
 
@@ -1716,7 +1736,7 @@ body.is-task-busy .cat-chip {
   width: 0%;
   background: var(--primary);
   border-radius: var(--radius-full);
-  transition: width 0.25s ease;
+  transition: width var(--transition-normal);
 }
 
 /* 完成 / 失败态：进度条不再是“还在跑”的蓝色 */
@@ -1853,9 +1873,9 @@ body.is-task-busy .cat-chip {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(20, 35, 70, 0.16);
-  background: #fff;
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-sm);
+  background: var(--paper);
 }
 
 .preview-thumbnail-box.is-pdf .preview-file-glyph {
@@ -1956,14 +1976,14 @@ body.is-task-busy .cat-chip {
 .lightbox-modal {
   position: fixed;
   inset: 0;
-  background: rgba(10, 14, 24, 0.88);
+  background: var(--overlay-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.25s ease;
+  transition: opacity var(--transition-normal), visibility var(--transition-normal);
   padding: 2rem;
   overscroll-behavior: contain;
 }
@@ -2001,7 +2021,7 @@ body.is-task-busy .cat-chip {
   max-height: calc(88vh - 64px);
   object-fit: contain;
   border-radius: var(--radius-lg);
-  background: #fff;
+  background: var(--paper);
   margin: auto;
 }
 
@@ -2019,7 +2039,7 @@ body.is-task-busy .cat-chip {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #fff;
+  background: var(--paper);
 }
 
 .lightbox-text {
@@ -2032,12 +2052,14 @@ body.is-task-busy .cat-chip {
   overflow-wrap: anywhere;
   background: var(--bg-surface);
   color: var(--text-primary);
-  font: 0.8125rem/1.7 "Cascadia Code", Consolas, "Microsoft YaHei", monospace;
+  font-family: "Cascadia Code", Consolas, "Microsoft YaHei", monospace;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
   tab-size: 2;
 }
 
 .lightbox-document-wrap:has(.lightbox-document:not([hidden])) {
-  background: #fff;
+  background: var(--paper);
 }
 
 .lightbox-toolbar {
@@ -2110,7 +2132,7 @@ body.is-task-busy .cat-chip {
   margin: auto;
   padding: 1.5rem;
   max-width: 60vw;
-  color: #e7edf7;
+  color: var(--on-dark);
   font-size: 0.9rem;
   text-align: center;
 }
@@ -2205,7 +2227,7 @@ body.is-task-busy .cat-chip {
   align-items: center;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   user-select: none;
   transition: border-color var(--transition-normal), box-shadow var(--transition-normal), transform var(--transition-normal);
 }
@@ -2214,8 +2236,8 @@ body.is-task-busy .cat-chip {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 38px;
-  padding: 0.45rem 0.6rem;
+  min-height: 42px;
+  padding: 0.5rem 0.75rem;
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -2406,7 +2428,7 @@ body.is-task-busy .cat-chip {
     margin: 1.25rem -1.25rem -1.25rem;
     padding: 0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    box-shadow: 0 -6px 18px rgba(20, 35, 70, 0.08);
+    box-shadow: none;
   }
   .ws-run-hint {
     flex: 1 1 100%;
@@ -2485,6 +2507,12 @@ body.is-task-busy .cat-chip {
 }
 
 @media (max-width: 640px) {
+  .container {
+    padding: 0 1rem;
+  }
+  .main-content {
+    padding: 1.25rem 0 3rem;
+  }
   /* 手机端头部改为两行：品牌 + 主题一行，搜索独占一行，避免搜索框被挤到 140px */
   .header-content {
     height: auto;
@@ -2544,7 +2572,7 @@ body.is-task-busy .cat-chip {
   .tool-icon {
     width: 38px;
     height: 38px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
   .tool-icon .icon {
     width: 19px;
@@ -2752,101 +2780,99 @@ body.bill-app-active .skip-link { display: none !important; }
 .bill-app {
   position: fixed; inset: 0; z-index: 500; display: flex; overflow: hidden;
   background: var(--bg-page); color: var(--text-primary);
-  font: 14px/1.55 "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  font-family: inherit; font-size: var(--fs-base); line-height: 1.6; letter-spacing: inherit;
 }
 .bill-app *, .bill-app *::before, .bill-app *::after { box-sizing: border-box; }
 .bill-sidebar {
-  width: 232px; flex: 0 0 232px; display: flex; flex-direction: column;
-  padding: 20px 14px; background: var(--bill-side-bg); color: var(--bill-side-text);
+  width: 240px; flex: 0 0 240px; display: flex; flex-direction: column;
+  padding: 24px 16px; background: var(--bill-side-bg); color: var(--bill-side-text);
   border-right: 1px solid var(--bill-side-border);
 }
-.bill-brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 20px; }
+.bill-brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 24px; }
 .bill-brand-mark {
   width: 32px; height: 32px; border-radius: var(--radius-md); display: grid; place-items: center;
   background: var(--text-primary); color: var(--bg-surface);
 }
 .bill-brand-mark .icon { width: 18px; height: 18px; }
 .bill-brand-text { display: flex; flex-direction: column; }
-.bill-brand-text strong { font-size: 15px; color: var(--text-primary); }
-.bill-brand-text span { font-size: 11px; color: var(--bill-side-muted); letter-spacing: .08em; }
-.bill-nav { display: flex; flex-direction: column; gap: 3px; }
+.bill-brand-text strong { font-size: var(--fs-md); color: var(--text-primary); font-weight: 650; }
+.bill-brand-text span { font-size: var(--fs-xs); color: var(--bill-side-muted); letter-spacing: .08em; }
+.bill-nav { display: flex; flex-direction: column; gap: 4px; }
 .bill-nav-item {
-  position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px;
-  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--bill-side-text);
-  font: inherit; font-size: 13.5px; text-align: left; cursor: pointer;
+  position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
+  border: 0; border-radius: var(--radius-md); background: transparent; color: var(--bill-side-text);
+  font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer;
   transition: background var(--transition-normal), color var(--transition-normal);
 }
 .bill-nav-item:hover { background: var(--bill-side-hover); color: var(--text-primary); }
 .bill-nav-item.active {
-  background: var(--bill-side-active); color: var(--primary); font-weight: 600;
+  background: var(--bill-side-active); color: var(--text-primary); font-weight: 600;
 }
-.bill-nav-item.active::before {
-  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
-  border-radius: 0 3px 3px 0; background: var(--primary);
-}
+.bill-nav-item.active::before { display: none; }
 .bill-nav-icon { width: 18px; display: flex; justify-content: center; flex-shrink: 0; }
 .bill-nav-icon .icon { width: 17px; height: 17px; }
 .bill-sidebar-divider { height: 1px; background: var(--bill-side-border); margin: 16px 6px; }
 .bill-sidebar-footer { margin-top: auto; padding: 0 6px; }
 .bill-config-chip {
-  border: 1px solid var(--bill-side-border); border-radius: 999px; padding: 5px 12px;
-  background: var(--bg-surface); color: var(--bill-side-text); font: inherit; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--bill-side-border); border-radius: var(--radius-full); padding: 5px 12px;
+  background: var(--bg-surface); color: var(--bill-side-text); font: inherit; font-size: var(--fs-xs); cursor: pointer;
   transition: border-color var(--transition-normal), color var(--transition-normal);
 }
 .bill-config-chip:hover { border-color: var(--primary); color: var(--primary); }
 .bill-config-chip.ok { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, transparent); background: var(--success-soft); }
-.bill-sidebar-footer p { color: var(--bill-side-muted); font-size: 11px; margin: 10px 0 0; line-height: 1.5; }
+.bill-sidebar-footer p { color: var(--bill-side-muted); font-size: var(--fs-xs); margin: 10px 0 0; line-height: 1.5; }
 /* 手机端 .bill-app 改为纵向 flex；这两层必须显式 min-height:0，
    否则会被内容按 min-height:auto 撑高，滚动容器失去可滚动高度，触摸滑动失效 */
 .bill-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .bill-topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 16px 28px; border-bottom: 1px solid var(--border-color); background: var(--bg-surface);
+  padding: 20px 32px; border-bottom: 1px solid var(--border-color); background: var(--bg-surface);
 }
-.bill-topbar h1 { margin: 0; font-size: 1.1875rem; font-weight: 600; letter-spacing: -0.015em; }
+.bill-topbar h1 { margin: 0; font-size: var(--fs-lg); font-weight: 650; letter-spacing: -0.02em; }
 .bill-topbar p { margin: 4px 0 0; color: var(--text-secondary); font-size: var(--fs-sm); }
 .bill-topbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
 /* 宽屏下限制正文宽度，避免表格与面板被拉到整屏 */
 .bill-content {
   flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain;
-  padding: 22px 28px 40px; width: 100%; max-width: 1320px; margin: 0 auto;
+  padding: 28px 32px 48px; width: 100%; max-width: 1320px; margin: 0 auto;
 }
 .bill-page { display: none; }
 .bill-page.active { display: block; }
 .bill-panel {
   background: var(--bg-surface); border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); margin-bottom: 16px;
+  border-radius: var(--radius-lg); padding: 22px; box-shadow: none; margin-bottom: 20px;
 }
-.bill-panel-label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: .06em; margin-bottom: 12px; }
+.bill-panel-label { font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted); letter-spacing: .06em; margin-bottom: 12px; }
 .bill-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 14px; border: 1px solid var(--border-color); border-radius: 8px;
-  background: var(--bg-surface); color: var(--text-primary); font: inherit; cursor: pointer; transition: .16s ease;
+  padding: 9px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  background: var(--bg-surface); color: var(--text-primary); font: inherit; font-weight: 500; cursor: pointer;
+  transition: background var(--transition-normal), color var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
-.bill-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.bill-btn:hover:not(:disabled) { border-color: var(--border-strong); background: var(--bg-subtle); color: var(--text-primary); }
 .bill-btn:disabled { opacity: .45; cursor: not-allowed; }
 .bill-btn-primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
-.bill-btn-primary:hover:not(:disabled) { background: var(--primary-strong); color: var(--on-primary); }
-.bill-btn-ghost { background: var(--bg-subtle); }
-.bill-btn-sm { padding: 6px 11px; font-size: 12px; }
+.bill-btn-primary:hover:not(:disabled) { background: var(--primary-strong); border-color: var(--primary-strong); color: var(--on-primary); }
+.bill-btn-ghost { background: transparent; }
+.bill-btn-sm { padding: 6px 11px; font-size: var(--fs-xs); }
 .bill-link-btn { border: 0; background: none; color: var(--primary); font: inherit; cursor: pointer; padding: 0; }
 .bill-link-btn:hover { text-decoration: underline; }
-.bill-icon-btn { border: 0; background: none; color: var(--text-secondary); font-size: 22px; cursor: pointer; line-height: 1; }
+.bill-icon-btn { border: 0; background: none; color: var(--text-secondary); font-size: var(--fs-xl); cursor: pointer; line-height: 1; }
 .bill-input {
-  width: 100%; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 8px;
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md);
   background: var(--bg-surface); color: var(--text-primary); font: inherit; outline: none;
 }
-.bill-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--accent-soft); }
+.bill-input:focus { border-color: var(--primary); box-shadow: var(--focus-ring); }
 .bill-input:disabled { opacity: .55; }
-.bill-textarea { resize: vertical; min-height: 44px; font-size: 12px; }
-.bill-small { width: auto; min-width: 180px; padding: 5px 8px; font-size: 12px; }
-.bill-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.bill-textarea { resize: vertical; min-height: 44px; font-size: var(--fs-xs); }
+.bill-small { width: auto; min-width: 180px; padding: 5px 8px; font-size: var(--fs-xs); }
+.bill-field { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-xs); color: var(--text-secondary); }
 .bill-field-head { display: flex; align-items: center; gap: 8px; }
 .bill-grow { flex: 1; }
-.bill-checkbox { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.bill-checkbox { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-secondary); white-space: nowrap; }
 .bill-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .bill-folder-row { padding-bottom: 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
-.bill-folder-path { flex: 1; min-width: 180px; color: var(--text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bill-folder-path { flex: 1; min-width: 180px; color: var(--text-secondary); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 动作按钮按用途分组，用细分隔线隔开“识别 / 产物 / 清理” */
 .bill-action-row { gap: 8px; align-items: center; }
 .bill-action-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -2855,25 +2881,25 @@ body.bill-app-active .skip-link { display: none !important; }
   border-left: 1px solid var(--border-color);
 }
 .bill-action-status-block { margin-top: 12px; }
-.bill-status-text { display: block; font-size: 12px; color: var(--text-secondary); margin: 10px 0 6px; }
+.bill-status-text { display: block; font-size: var(--fs-xs); color: var(--text-secondary); margin: 10px 0 6px; }
 /* 空闲时不渲染空进度条，避免看起来像坏掉的控件 */
 .bill-progress {
-  display: none; height: 6px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden;
+  display: none; height: 6px; border-radius: var(--radius-full); background: var(--bg-subtle); overflow: hidden;
 }
 .bill-progress.has-progress { display: block; }
-.bill-progress > div { height: 100%; width: 0; border-radius: 999px; background: var(--primary); transition: width .2s ease; }
+.bill-progress > div { height: 100%; width: 0; border-radius: var(--radius-full); background: var(--primary); transition: width var(--transition-normal); }
 .bill-progress.is-done > div { background: var(--success); }
 .bill-status-progress { margin-top: 8px; }
 .bill-summary { display: flex; justify-content: space-between; gap: 16px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color); }
 .bill-summary > div { display: flex; flex-direction: column; gap: 4px; }
-.bill-summary-label { font-size: 11px; color: var(--text-muted); }
-.bill-summary strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.bill-summary-label { font-size: var(--fs-xs); color: var(--text-muted); }
+.bill-summary strong { font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
 .bill-align-right { text-align: right; }
 .bill-upload-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 16px; align-items: start; }
 .bill-side-panel { margin-bottom: 0; }
 .bill-dropzone {
-  border: 2px dashed var(--border-color); border-radius: var(--radius-lg); padding: 30px 16px;
-  text-align: center; cursor: pointer; background: var(--bg-page);
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 34px 16px;
+  text-align: center; cursor: pointer; background: color-mix(in srgb, var(--bg-subtle) 65%, transparent);
   transition: border-color var(--transition-normal), background var(--transition-normal);
 }
 .bill-dropzone:hover, .bill-dropzone.dragover { border-color: var(--primary); background: var(--accent-soft); }
@@ -2882,39 +2908,39 @@ body.bill-app-active .skip-link { display: none !important; }
 .bill-dropzone-icon { color: var(--primary); line-height: 1; display: flex; justify-content: center; }
 .bill-dropzone-icon .icon { width: 26px; height: 26px; }
 .bill-dropzone-title { font-weight: 600; margin-top: 8px; }
-.bill-dropzone-hint { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.bill-dropzone-hint { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: 4px; }
 .bill-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .bill-action-grid.single-action { grid-template-columns: 1fr; }
 .bill-file-chips, .bill-template-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
 .bill-file-chip {
   display: inline-flex; align-items: center; gap: 6px; max-width: 260px; padding: 4px 8px;
-  border-radius: 999px; background: var(--bg-subtle); border: 1px solid var(--border-color); font-size: 12px;
+  border-radius: var(--radius-full); background: var(--bg-subtle); border: 1px solid var(--border-color); font-size: var(--fs-xs);
 }
 .bill-file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bill-chip-x { border: 0; background: none; color: var(--text-muted); cursor: pointer; font-size: 15px; line-height: 1; }
+.bill-chip-x { border: 0; background: none; color: var(--text-muted); cursor: pointer; font-size: var(--fs-md); line-height: 1; }
 /* 高级 / 可选输入折叠起来，主流程只留必要操作 */
 .bill-advanced { margin-top: 12px; border-top: 1px dashed var(--border-color); padding-top: 10px; }
 .bill-advanced summary {
   display: flex; align-items: center; gap: 6px; cursor: pointer;
-  font-size: 12px; color: var(--text-secondary); list-style: none;
+  font-size: var(--fs-xs); color: var(--text-secondary); list-style: none;
 }
 .bill-advanced summary::-webkit-details-marker { display: none; }
-.bill-advanced summary::before { content: "▸"; color: var(--text-muted); font-size: 11px; }
+.bill-advanced summary::before { content: "▸"; color: var(--text-muted); font-size: var(--fs-xs); }
 .bill-advanced[open] summary::before { content: "▾"; }
 .bill-advanced summary:hover { color: var(--primary); }
 .bill-advanced .bill-field { margin-top: 8px; }
 .bill-results-header { display: flex; align-items: center; gap: 10px; margin: 22px 0 10px; }
-.bill-results-header h2, .bill-table-heading h2 { font-size: 16px; margin: 0; }
+.bill-results-header h2, .bill-table-heading h2 { font-size: var(--fs-lg); margin: 0; }
 .bill-results-header span {
-  font-size: 12px; color: var(--text-secondary); background: var(--bg-subtle);
-  border: 1px solid var(--border-color); border-radius: 999px; padding: 1px 8px;
+  font-size: var(--fs-xs); color: var(--text-secondary); background: var(--bg-subtle);
+  border: 1px solid var(--border-color); border-radius: var(--radius-full); padding: 1px 8px;
 }
 .bill-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
 .bill-result-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px; }
 .bill-result-head { display: flex; align-items: center; gap: 10px; }
 .bill-file-icon {
-  min-width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center;
-  background: var(--accent-soft); color: var(--primary); font-size: 10px; font-weight: 700;
+  min-width: 40px; height: 40px; border-radius: var(--radius-sm); display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--primary); font-size: var(--fs-xs); font-weight: 700;
 }
 .bill-file-icon.error { background: var(--danger-soft); color: var(--danger); }
 .bill-result-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
@@ -2922,29 +2948,29 @@ body.bill-app-active .skip-link { display: none !important; }
 .bill-result-body { margin-top: 12px; }
 .bill-kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
 .bill-kv { min-width: 0; }
-.bill-kv-name { font-size: 11px; color: var(--text-muted); }
-.bill-kv-value { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bill-kv-name { font-size: var(--fs-xs); color: var(--text-muted); }
+.bill-kv-value { font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bill-result-details { display: none; margin-top: 10px; max-height: 240px; overflow: auto; }
 .bill-result-details.open { display: block; }
-.bill-result-details table, .bill-detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.bill-result-details table, .bill-detail-table { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); }
 .bill-result-details td, .bill-detail-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); }
 .bill-result-details td:first-child, .bill-detail-table td:first-child { width: 38%; color: var(--text-secondary); }
-.bill-result-pending { margin-top: 12px; font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+.bill-result-pending { margin-top: 12px; font-size: var(--fs-xs); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
 .bill-mini-spinner { width: 14px; height: 14px; border: 2px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: billspin .8s linear infinite; }
 @keyframes billspin { to { transform: rotate(360deg); } }
-.bill-result-error { margin-top: 10px; font-size: 12px; color: var(--danger); }
-.bill-status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; white-space: nowrap; }
+.bill-result-error { margin-top: 10px; font-size: var(--fs-xs); color: var(--danger); }
+.bill-status { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--fs-xs); white-space: nowrap; }
 .bill-status-success { background: var(--success-soft); color: var(--success); }
 .bill-status-failed { background: var(--danger-soft); color: var(--danger); }
 .bill-status-local { background: var(--warning-soft); color: var(--warning); }
 .bill-status-running { background: var(--accent-soft); color: var(--primary); }
 .bill-status-pending { background: var(--bg-subtle); color: var(--text-secondary); }
-.bill-empty-state { padding: 26px 12px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+.bill-empty-state { padding: 26px 12px; text-align: center; color: var(--text-secondary); font-size: var(--fs-sm); }
 /* 排序区：标签统一顶部对齐，不再靠 align-items:end 让基线参差 */
 .bill-sort-grid { display: grid; grid-template-columns: minmax(180px, 220px) minmax(240px, 1fr) auto; gap: 14px 16px; align-items: start; }
-.bill-sort-auto-hint { font-size: 11px; color: var(--text-muted); align-self: end; padding-bottom: 9px; }
-.bill-order-source-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
-.bill-sort-notice { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 12px; }
+.bill-sort-auto-hint { font-size: var(--fs-xs); color: var(--text-muted); align-self: end; padding-bottom: 9px; }
+.bill-order-source-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: var(--fs-xs); color: var(--text-secondary); }
+.bill-sort-notice { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: var(--fs-xs); }
 .bill-sort-notice.warn { background: var(--warning-soft); color: var(--warning); }
 .bill-sort-notice.success { background: var(--success-soft); color: var(--success); }
 .bill-sort-notice-icon { font-weight: 700; }
@@ -2953,46 +2979,46 @@ body.bill-app-active .skip-link { display: none !important; }
 .bill-field > span:first-child { line-height: 1.5; }
 .bill-align-end { align-self: end; }
 .bill-template-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.bill-template-label { font-size: 12px; color: var(--text-muted); }
+.bill-template-label { font-size: var(--fs-xs); color: var(--text-muted); }
 .bill-template-chips { margin: 0; flex: 1; }
 .bill-template-chip, .bill-selected-chip {
-  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px;
-  font-size: 12px; border: 1px solid var(--border-color); background: var(--bg-subtle);
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: var(--radius-full);
+  font-size: var(--fs-xs); border: 1px solid var(--border-color); background: var(--bg-subtle);
   color: var(--text-secondary); cursor: pointer;
 }
 .bill-template-chip:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
 .bill-selected-chip { background: var(--accent-soft); border-color: var(--primary); color: var(--primary); cursor: grab; }
 .bill-selected-chip.dragging { opacity: .5; }
-.bill-selected-chip.drag-over { box-shadow: 0 0 0 2px var(--primary); }
-.bill-drag-handle { font-size: 10px; color: var(--text-muted); }
-.bill-selected-x { border: 0; background: none; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; }
+.bill-selected-chip.drag-over { box-shadow: var(--shadow-sm); }
+.bill-drag-handle { font-size: var(--fs-xs); color: var(--text-muted); }
+.bill-selected-x { border: 0; background: none; color: inherit; cursor: pointer; font-size: var(--fs-base); line-height: 1; }
 .bill-chip-move {
   width: 20px;
   height: 20px;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--primary) 10%, transparent);
   color: var(--primary);
-  font: 700 11px/1 "Microsoft YaHei", sans-serif;
+  font-family: "Microsoft YaHei", sans-serif; font-size: var(--fs-xs); font-weight: 700; line-height: 1;
   cursor: pointer;
 }
 .bill-chip-move:hover:not(:disabled) { background: var(--primary); color: var(--on-primary); }
 .bill-chip-move:disabled { opacity: .3; cursor: default; }
 .bill-field-divider { width: 1px; height: 18px; background: var(--border-color); margin: 0 3px; }
-.bill-template-hint { font-size: 11px; color: var(--text-muted); }
-.bill-name-preview-line { margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
+.bill-template-hint { font-size: var(--fs-xs); color: var(--text-muted); }
+.bill-name-preview-line { margin-top: 12px; font-size: var(--fs-xs); color: var(--text-secondary); }
 .bill-name-preview-line span:last-child { font-family: Consolas, monospace; color: var(--text-primary); }
 .bill-name-preview-line span.error { color: var(--danger); }
 .bill-table-panel { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; }
 .bill-table-heading { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border-color); }
-.bill-table-hint { font-size: 11px; color: var(--text-muted); }
-.bill-inline-summary { margin: 0; padding: 0; border: 0; font-size: 12px; color: var(--text-secondary); }
-.bill-inline-summary strong { font-size: 12px; }
+.bill-table-hint { font-size: var(--fs-xs); color: var(--text-muted); }
+.bill-inline-summary { margin: 0; padding: 0; border: 0; font-size: var(--fs-xs); color: var(--text-secondary); }
+.bill-inline-summary strong { font-size: var(--fs-xs); }
 .bill-table-wrap { overflow: auto; max-height: 460px; }
-.bill-data-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
-.bill-data-table th { position: sticky; top: 0; background: var(--bg-subtle); color: var(--text-secondary); padding: 9px 10px; text-align: left; font-weight: 600; }
-.bill-data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); max-width: 220px; }
+.bill-data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); white-space: nowrap; }
+.bill-data-table th { position: sticky; top: 0; background: var(--bg-subtle); color: var(--text-secondary); padding: var(--space-3) 10px; text-align: left; font-weight: 600; }
+.bill-data-table td { padding: var(--space-3) 10px; border-bottom: 1px solid var(--border-color); max-width: 220px; }
 .bill-data-table tbody tr:hover { background: var(--bg-subtle); cursor: default; }
 .bill-col-index { width: 44px; }
 .bill-num { text-align: right; }
@@ -3000,28 +3026,28 @@ body.bill-app-active .skip-link { display: none !important; }
 .bill-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bill-mono { font-family: Consolas, monospace; }
 .bill-preview { color: var(--primary); }
-.bill-cache-badge { margin-left: 5px; padding: 1px 5px; border-radius: 4px; background: var(--bg-subtle); font-size: 10px; color: var(--text-muted); }
+.bill-cache-badge { margin-left: 5px; padding: 1px 5px; border-radius: var(--radius-xs); background: var(--bg-subtle); font-size: var(--fs-xs); color: var(--text-muted); }
 .bill-settings-panel { max-width: 720px; }
-.bill-settings-panel h2 { font-size: 17px; margin: 0 0 6px; }
-.bill-muted { font-size: 12px; color: var(--text-secondary); margin: 0 0 18px; line-height: 1.7; }
-.bill-form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-size: 12px; color: var(--text-secondary); }
+.bill-settings-panel h2 { font-size: var(--fs-lg); margin: 0 0 6px; }
+.bill-muted { font-size: var(--fs-xs); color: var(--text-secondary); margin: 0 0 18px; line-height: 1.7; }
+.bill-form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-size: var(--fs-xs); color: var(--text-secondary); }
 .bill-input-with-btn { display: flex; gap: 8px; }
 .bill-form-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.bill-hint-box { background: var(--bg-subtle); border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+.bill-hint-box { background: var(--bg-subtle); border-radius: var(--radius-sm); padding: 12px 14px; font-size: var(--fs-xs); color: var(--text-secondary); line-height: 1.7; }
 .bill-hint-box p { margin: 6px 0 0; }
 .bill-modal { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 20px; }
-.bill-modal-backdrop { position: absolute; inset: 0; background: rgba(10, 15, 25, .55); }
+.bill-modal-backdrop { position: absolute; inset: 0; background: var(--overlay); }
 .bill-modal-card { position: relative; z-index: 1; width: min(440px, 100%); background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-lg); }
 .bill-modal-wide { width: min(760px, 100%); }
-.bill-modal-card h3 { margin: 0 0 10px; font-size: 16px; }
+.bill-modal-card h3 { margin: 0 0 10px; font-size: var(--fs-lg); }
 .bill-modal-head { display: flex; align-items: center; justify-content: space-between; }
-.bill-modal-text { white-space: pre-wrap; font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+.bill-modal-text { white-space: pre-wrap; font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.7; }
 .bill-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .bill-detail-body { max-height: 60vh; overflow: auto; margin-top: 12px; }
-.bill-detail-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 12px; color: var(--text-secondary); padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
-.bill-detail-section-title { font-size: 13px; margin: 16px 0 8px; }
+.bill-detail-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: var(--fs-xs); color: var(--text-secondary); padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+.bill-detail-section-title { font-size: var(--fs-sm); margin: 16px 0 8px; }
 .bill-notice-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.bill-notice-list span { padding: 3px 8px; border-radius: 6px; background: var(--bg-subtle); font-family: Consolas, monospace; font-size: 11px; }
+.bill-notice-list span { padding: 3px 8px; border-radius: var(--radius-sm); background: var(--bg-subtle); font-family: Consolas, monospace; font-size: var(--fs-xs); }
 @media (max-width: 1100px) {
   .bill-upload-grid, .bill-sort-grid, .bill-rename-grid { grid-template-columns: 1fr; }
   .bill-sort-auto-hint { padding: 0; }
@@ -3038,7 +3064,7 @@ body.bill-app-active .skip-link { display: none !important; }
   /* 图标条放不下芯片文案，直接隐藏；设置仍可从侧栏进入 */
   .bill-sidebar-footer { display: none; }
   .bill-topbar, .bill-content { padding: 14px; }
-  .bill-topbar h1 { font-size: 17px; }
+  .bill-topbar h1 { font-size: var(--fs-lg); }
   .bill-topbar p { display: none; }
   .bill-action-grid { grid-template-columns: 1fr; }
 }
@@ -3079,20 +3105,20 @@ body.bill-app-active .skip-link { display: none !important; }
 
 .bill-panel-heading h2 {
   margin: 2px 0 4px;
-  font-size: 18px;
+  font-size: var(--fs-lg);
 }
 
 .bill-panel-heading p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.6;
 }
 
 .bill-step-label {
   display: block;
   color: var(--primary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.03em;
 }
@@ -3104,18 +3130,18 @@ body.bill-app-active .skip-link { display: none !important; }
   border-radius: var(--radius-full);
   background: var(--success-soft);
   color: var(--success);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
 }
 
 .bill-btn {
   min-height: 38px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-btn-sm {
   min-height: 34px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-btn:focus-visible,
@@ -3128,30 +3154,30 @@ body.bill-app-active .skip-link { display: none !important; }
 
 .bill-input {
   min-height: 38px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-textarea {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
 }
 
 .bill-small {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-field,
 .bill-checkbox,
 .bill-form-row {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-status-text {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-summary-label {
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 .bill-results-header {
@@ -3171,7 +3197,7 @@ body.bill-app-active .skip-link { display: none !important; }
   border-radius: var(--radius-full);
   background: var(--bg-subtle);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 .bill-result-filters {
@@ -3191,7 +3217,7 @@ body.bill-app-active .skip-link { display: none !important; }
   background: transparent;
   color: var(--text-secondary);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   cursor: pointer;
 }
 
@@ -3209,7 +3235,7 @@ body.bill-app-active .skip-link { display: none !important; }
 .bill-ocr-source {
   margin: 8px 0 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1.55;
 }
 
@@ -3231,11 +3257,11 @@ body.bill-app-active .skip-link { display: none !important; }
 
 .bill-empty-state strong {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--fs-base);
 }
 
 .bill-empty-state span {
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 .bill-results > .bill-empty-state,
@@ -3246,58 +3272,58 @@ body.bill-app-active .skip-link { display: none !important; }
 }
 
 .bill-kv-name {
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 .bill-kv-value {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-status {
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 .bill-cache-badge {
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .bill-table-hint {
   display: block;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 400;
 }
 
 .bill-sort-auto-hint,
 .bill-template-hint {
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 .bill-advanced summary {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-file-chip {
   min-height: 32px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-detail-meta,
 .bill-detail-table {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-file-icon {
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .bill-data-table {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .bill-data-table th,
 .bill-data-table td {
-  padding: 9px 10px;
+  padding: var(--space-3) 10px;
 }
 
 .bill-actions-col {
@@ -3312,7 +3338,7 @@ body.bill-app-active .skip-link { display: none !important; }
   background: var(--bg-surface);
   color: var(--primary);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -3394,18 +3420,18 @@ body.bill-app-active .skip-link { display: none !important; }
 }
 
 .bill-output-summary strong {
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .bill-output-summary > div > span:last-child {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 .bill-output-toggle {
   flex-shrink: 0;
   color: var(--primary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 
@@ -3437,7 +3463,7 @@ body.bill-app-active .skip-link { display: none !important; }
 
 .bill-settings-section h3 {
   margin: 0 0 10px;
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .bill-settings-section .bill-hint-box {
@@ -3451,7 +3477,7 @@ body.bill-app-active .skip-link { display: none !important; }
 .bill-cloud-settings summary {
   cursor: pointer;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   list-style: none;
 }
@@ -3541,9 +3567,7 @@ body.bill-app-active .skip-link { display: none !important; }
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--bill-side-border);
     border-right: 0;
-    background: color-mix(in srgb, var(--bill-side-bg) 94%, transparent);
-    backdrop-filter: blur(12px);
-    box-shadow: 0 -6px 20px rgba(10, 15, 25, 0.12);
+    background: var(--bill-side-bg);
   }
   .bill-brand,
   .bill-sidebar-divider,
@@ -3568,7 +3592,7 @@ body.bill-app-active .skip-link { display: none !important; }
     gap: 2px;
     min-height: 50px;
     padding: 5px 2px;
-    font-size: 11px;
+    font-size: var(--fs-xs);
     border-radius: var(--radius-md);
   }
   .bill-nav-item-label {
@@ -3600,7 +3624,7 @@ body.bill-app-active .skip-link { display: none !important; }
     gap: 8px;
   }
   .bill-topbar h1 {
-    font-size: 17px;
+    font-size: var(--fs-lg);
   }
   .bill-topbar-actions {
     gap: 6px;
@@ -3620,7 +3644,7 @@ body.bill-app-active .skip-link { display: none !important; }
     padding: 14px;
   }
   .bill-panel-heading h2 {
-    font-size: 17px;
+    font-size: var(--fs-lg);
   }
   .bill-panel-heading {
     margin-bottom: 12px;
@@ -3683,12 +3707,12 @@ body.bill-app-active .skip-link { display: none !important; }
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 13px;
+    font-size: var(--fs-sm);
   }
   .bill-mobile-invoice-name {
     overflow-wrap: anywhere;
     color: var(--primary);
-    font-size: 12px;
+    font-size: var(--fs-xs);
   }
   .bill-mobile-invoice-fields {
     display: grid;
@@ -3700,11 +3724,11 @@ body.bill-app-active .skip-link { display: none !important; }
   }
   .bill-mobile-invoice-fields dt {
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: var(--fs-xs);
   }
   .bill-mobile-invoice-fields dd {
     margin: 1px 0 0;
-    font-size: 13px;
+    font-size: var(--fs-sm);
     overflow-wrap: anywhere;
   }
   .bill-mobile-invoice-card > .bill-btn {
@@ -3759,7 +3783,7 @@ body.bill-app-active .skip-link { display: none !important; }
     max-width: none;
   }
   .bill-settings-panel h2 {
-    font-size: 18px;
+    font-size: var(--fs-lg);
   }
   .toast-stack {
     right: 12px;
@@ -3781,7 +3805,7 @@ body.bill-app-active .skip-link { display: none !important; }
     white-space: nowrap;
   }
   .bill-brand-title {
-    font-size: 15px;
+    font-size: var(--fs-md);
   }
   .bill-action-group .bill-btn {
     flex: 1 1 100%;
@@ -14434,8 +14458,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             </div>
             <div class="bill-table-wrap">
               <table class="bill-data-table"><thead><tr>
-                <th class="bill-col-index">#</th><th>原文件名</th><th>新文件名</th><th>类型</th><th>发票号码</th>
-                <th>开票日期</th><th class="bill-num">金额</th><th>购买方</th><th>销售方</th><th>状态</th><th>操作</th>
+                <th class="bill-col-index">#</th><th>原文件名</th><th>新文件名</th><th>发票号码</th>
+                <th>开票日期</th><th class="bill-num">金额</th><th>状态</th><th>操作</th>
               </tr></thead><tbody id="bill-invoice-table-body"></tbody></table>
             </div>
             <div id="bill-invoice-mobile-list" class="bill-mobile-invoice-list"></div>
@@ -15512,7 +15536,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const x = (i % across) * tw;
         const y = Math.floor(i / across) * th;
         if (y >= height) break;
-        chunks.push({ x, y, w: Math.min(tw, width - x), h: Math.min(th, height - y), offset: offs[i], byteCount: sizes[i] || 0 });
+        // 分块 TIFF 的每个 tile 在文件里都是完整的 tw×th（边缘用填充像素补齐），
+        // 因此行跨距恒为 tw，不能用裁剪后的 chunk.w，否则右/下边缘块会整体错位。
+        chunks.push({ x, y, w: Math.min(tw, width - x), h: Math.min(th, height - y), stride: tw, offset: offs[i], byteCount: sizes[i] || 0 });
       }
     } else {
       const offs = values(273) || [];
@@ -15524,7 +15550,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const next = i + 1 < offs.length ? offs[i + 1] : bytes.length;
         chunks.push({
           x: 0, y, w: width, h: Math.min(rowsPerStrip, height - y),
-          offset: offs[i], byteCount: sizes[i] || Math.max(0, next - offs[i])
+          stride: width, offset: offs[i], byteCount: sizes[i] || Math.max(0, next - offs[i])
         });
       }
     }
@@ -15585,7 +15611,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       }
       let raw = bytes.subarray(chunk.offset, chunk.offset + chunk.byteCount);
       raw = await tiffDecompress(raw, info.compression);
-      const rowSamples = chunk.w * info.samples;
+      const rowSamples = (chunk.stride || chunk.w) * info.samples;
       if (info.predictor === 2) tiffUndoPredictor(raw, rowSamples, info.samples, bps, info.le);
       const samples = info.samples;
       for (let y = 0; y < chunk.h; y++) {
@@ -15662,7 +15688,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const slice = bytes.subarray(chunk.offset, chunk.offset + chunk.byteCount);
       if (!slice.length) continue;
       const part = await imageBlobToCanvas(new Blob([slice], { type: 'image/jpeg' }));
-      ctx.drawImage(part, chunk.x, chunk.y, chunk.w, chunk.h);
+      // 边缘 tile 解码后仍是完整 tw×th，按源区域裁剪后放置，避免被缩放变形。
+      ctx.drawImage(part, 0, 0, chunk.w, chunk.h, chunk.x, chunk.y, chunk.w, chunk.h);
     }
     return canvas;
   }
@@ -16560,7 +16587,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const rid = 'rId' + (idx + 1);
       const name = '图片 ' + (idx + 1);
       const inline = `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${idx + 2}" name="${xmlEsc(name)}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${idx + 2}" name="${xmlEsc(im.name)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
-      if (cfg.title) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(cfg.title)}</w:t></w:r></w:p>`;
+      // 文档标题只写在首张图片上方，不能随每张图片重复插入。
+      if (cfg.title && idx === 0) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(cfg.title)}</w:t></w:r></w:p>`;
       body += `<w:p><w:r>${inline}</w:r></w:p>`;
       if (cfg.caption) body += `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(im.caption || '')}</w:t></w:r></w:p>`;
       if (cfg.pageBreak && idx < images.length - 1) body += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
@@ -16589,16 +16617,25 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     zip.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships ' + RELS + '><Relationship Id="rId1" Type="' + REL + '/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
     const EMU_PER_PX = 9525;
     const widthPx = Math.round(Math.max(1, Math.min(25, cfg.widthCm || 15)) / 2.54 * 96);
+    // Excel 单行高度上限 409.5pt，超出会被截断并让图片压到下一行；
+    // 竖图按上限等比缩小（保持宽高比），行高与锚点尺寸必须用同一份几何数据。
+    const baseCx = Math.round(widthPx * EMU_PER_PX);
+    const MAX_ROW_PT = 408;
+    const geometry = images.map(im => {
+      let cx = baseCx;
+      let cy = Math.max(1, Math.round(baseCx * im.h / Math.max(1, im.w)));
+      const cap = MAX_ROW_PT * 12700;
+      if (cy > cap) { cx = Math.max(1, Math.round(cx * cap / cy)); cy = cap; }
+      return { cx, cy };
+    });
     const rows = images.map((im, i) => {
-      const cy = Math.round(widthPx * im.h / Math.max(1, im.w) * EMU_PER_PX);
-      const heightPt = Math.round(cy / 12700);
+      const heightPt = Math.max(1, Math.round(geometry[i].cy / 12700));
       return `<row r="${i + 1}" ht="${heightPt}" customHeight="1"><c r="A${i + 1}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(im.caption || '')}</t></is></c></row>`;
     }).join('');
     zip.file('xl/worksheets/sheet1.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="' + REL + '"><sheetData>' + rows + '</sheetData><drawing r:id="rId1"/></worksheet>');
     zip.file('xl/worksheets/_rels/sheet1.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships ' + RELS + '><Relationship Id="rId1" Type="' + REL + '/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
     const anchors = images.map((im, i) => {
-      const cx = Math.round(widthPx * EMU_PER_PX);
-      const cy = Math.round(widthPx * im.h / Math.max(1, im.w) * EMU_PER_PX);
+      const { cx, cy } = geometry[i];
       return `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${i}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${cx}" cy="${cy}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${i + 2}" name="${xmlEsc(im.name)}"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${i + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
     }).join('');
     zip.file('xl/drawings/drawing1.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="' + REL + '">' + anchors + '</xdr:wsDr>');
@@ -16804,7 +16841,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         d[i] = 255; d[i + 1] = 64; d[i + 2] = 64;
         changed++;
       } else {
-        const gray = Math.round((da[i] + da[i + 1] + da[i + 2]) / 9);
+        const gray = Math.round((da[i] + da[i + 1] + da[i + 2]) / 3);
         d[i] = d[i + 1] = d[i + 2] = gray;
       }
       d[i + 3] = 255;
@@ -16954,7 +16991,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   function sha512Bytes(input, variant) {
     const msg = input;
     const n = msg.length;
-    const total = (((n + 17) >> 7) + 1) * 128;
+    // 填充后总长须为 128 的整数倍且至少容纳 0x80 与 16 字节长度（n+17）。
+    const total = (((n + 16) >> 7) + 1) * 128;
     const buf = new Uint8Array(total);
     buf.set(msg); buf[n] = 0x80;
     const dv = new DataView(buf.buffer);
@@ -17385,7 +17423,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     sheets.forEach((sheet, si) => {
       const colLetter = n => { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
       const rowsXml = sheet.grid.map((row, ri) => {
-        const cells = row.map((cell, ci) => cell ? '<c r="' + colLetter(ci) + (ri + 1) + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(cell) + '</t></is></c>' : '').join('');
+        // 0 / false 也是有效数据，不能用真假值判断是否输出单元格。
+        const cells = row.map((cell, ci) => (cell == null || cell === '')
+          ? '' : '<c r="' + colLetter(ci) + (ri + 1) + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(cell) + '</t></is></c>').join('');
         return cells ? '<row r="' + (ri + 1) + '">' + cells + '</row>' : '';
       }).join('');
       const cols = [];
@@ -17427,10 +17467,14 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         shared.push(t);
       }
     }
-    const wbDom = new DOMParser().parseFromString(await (zip.file('xl/workbook.xml') || zip.file('xl/workbook.xml')).async('string'), 'application/xml');
-    const relsDom = new DOMParser().parseFromString(await zip.file('xl/_rels/workbook.xml.rels').async('string'), 'application/xml');
+    const wbEntry = zip.file('xl/workbook.xml') || zip.file('xl/Workbook.xml');
+    if (!wbEntry) throw new Error('无法识别的 xlsx 文件');
+    const wbDom = new DOMParser().parseFromString(await wbEntry.async('string'), 'application/xml');
+    const relEntry = zip.file('xl/_rels/workbook.xml.rels');
+    const relsDom = relEntry ? new DOMParser().parseFromString(await relEntry.async('string'), 'application/xml') : null;
     const relMap = {};
-    for (const rel of relsDom.getElementsByTagName('Relationship')) relMap[rel.getAttribute('Id')] = rel.getAttribute('Target');
+    // 缺少关系表时按 sheet1、sheet2… 的约定兜底，不阻断转换。
+    if (relsDom) for (const rel of relsDom.getElementsByTagName('Relationship')) relMap[rel.getAttribute('Id')] = rel.getAttribute('Target');
     const sheets = [];
     const sheetEls = wbDom.getElementsByTagName('sheet');
     for (let si = 0; si < sheetEls.length; si++) {
@@ -17836,30 +17880,35 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
 
   /* ---- 行列网格渲染为 PDF 表格（供 CSV 转 PDF 使用） ---- */
   async function renderGridToPdf(grid, outName) {
-    const PW = 842, PH = 595, colW = 110, rowH = 24, perPage = Math.floor((PH - 70) / rowH);
+    const PW = 842, PH = 595, colW = 110, rowH = 24, MARGIN = 24;
+    const perPage = Math.floor((PH - 70) / rowH);
+    // 横向放不下的列必须分页，否则第 8 列起会画到画布外被静默丢弃。
+    const colsPerPage = Math.max(1, Math.floor((PW - MARGIN * 2) / colW));
     const cols = grid.reduce((m, r) => Math.max(m, r.length), 1);
     const doc = await PDFLib.PDFDocument.create();
     for (let r0 = 0; r0 < Math.max(1, grid.length); r0 += perPage) {
-      const { cv, c, scale } = makeOfficeCanvas(PW, PH);
-      for (let ri = 0; ri < perPage && r0 + ri < grid.length; ri++) {
-        const row = grid[r0 + ri] || [];
-        const y = 30 + ri * rowH;
-        for (let ci = 0; ci < cols; ci++) {
-          const x = 24 + ci * colW;
-          c.strokeStyle = '#999';
-          c.lineWidth = 1;
-          c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
-          const txt = String(row[ci] || '').slice(0, 14);
-          if (txt) {
-            c.fillStyle = '#000';
-            c.font = '20px "Microsoft YaHei", sans-serif';
-            c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+      for (let c0 = 0; c0 < Math.max(1, cols); c0 += colsPerPage) {
+        const { cv, c, scale } = makeOfficeCanvas(PW, PH);
+        for (let ri = 0; ri < perPage && r0 + ri < grid.length; ri++) {
+          const row = grid[r0 + ri] || [];
+          const y = 30 + ri * rowH;
+          for (let ci = c0; ci < Math.min(cols, c0 + colsPerPage); ci++) {
+            const x = MARGIN + (ci - c0) * colW;
+            c.strokeStyle = '#999';
+            c.lineWidth = 1;
+            c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
+            const txt = String(row[ci] || '').slice(0, 14);
+            if (txt) {
+              c.fillStyle = '#000';
+              c.font = '20px "Microsoft YaHei", sans-serif';
+              c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+            }
           }
         }
+        const png = await canvasToBlob(cv, 'image/png');
+        const page = doc.addPage([PW, PH]);
+        page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
       }
-      const png = await canvasToBlob(cv, 'image/png');
-      const page = doc.addPage([PW, PH]);
-      page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
     }
     return [{ name: outName, blob: bytesToBlob(await doc.save(), 'application/pdf') }];
   }
@@ -18924,7 +18973,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   function billCellText(v) {
     if (v == null) return '';
     if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(v);
-    return String(v).replace(/\u3000/g, ' ').trim();
+    return String(v).replace(/^\ufeff/, '').replace(/\u3000/g, ' ').trim();
   }
   function billIsInvoiceLike(text) {
     if (!text || text.length > 40 || BILL_SKIP_WORDS.has(text)) return false;
@@ -18940,8 +18989,25 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     const name = String(file.name || '').toLowerCase();
     if (/\.(xlsx|xlsm)$/.test(name)) return parseXlsxFile(file);
     if (/\.(csv|txt)$/.test(name)) {
-      const text = await file.text();
-      const grid = text.split(/\r?\n/).map(line => line.split(/[,\t;，]/).map(s => s.trim()));
+      // Excel 导出的 CSV 常带 UTF-8 BOM，备注字段也可能含逗号/引号；
+      // 简单 split 会吞掉首个号码或把一列拆成两列，导致候选列识别错乱。
+      const text = (await file.text()).replace(/^\ufeff/, '');
+      const grid = text.split(/\r?\n/).map(line => {
+        const cells = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (inQ) {
+            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+            else if (ch === '"') inQ = false;
+            else cur += ch;
+          } else if (ch === '"') inQ = true;
+          else if (/[,;\t，]/.test(ch)) { cells.push(cur.trim()); cur = ''; }
+          else cur += ch;
+        }
+        cells.push(cur.trim());
+        return cells;
+      });
       return [{ name: baseName(file.name), grid }];
     }
     if (/\.xls$/.test(name)) {
@@ -19493,15 +19559,23 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           for (let i = 0; i < total; i += per) {
             ctx.progress(i, total, `正在拼版 ${Math.min(i + per, total)}/${total}…`);
             const page = doc.addPage([srcSize.width, srcSize.height]);
-            const cellW = (srcSize.width - gap * (cols + 1)) / cols;
-            const cellH = (srcSize.height - gap * (rows + 1)) / rows;
+            const cellW = Math.max(1, (srcSize.width - gap * (cols + 1)) / cols);
+            const cellH = Math.max(1, (srcSize.height - gap * (rows + 1)) / rows);
             for (let k = 0; k < per && i + k < total; k++) {
               const [sp] = await doc.copyPages(src, [i + k]);
               const ep = await doc.embedPage(sp);
               const c = k % cols, r = Math.floor(k / cols);
-              const x = gap + c * (cellW + gap);
-              const y = srcSize.height - gap - (r + 1) * cellH - r * gap;
-              page.drawPage(ep, { x, y, width: cellW, height: cellH });
+              // 2 合 1 的格子是整页宽、半页高；同时传 width/height 会把内容纵向压扁，
+              // 必须按同一比例缩放并在格子内居中。
+              const k2 = Math.min(cellW / ep.width, cellH / ep.height);
+              const dw = ep.width * k2, dh = ep.height * k2;
+              const cellX = gap + c * (cellW + gap);
+              const cellY = srcSize.height - gap - (r + 1) * cellH - r * gap;
+              page.drawPage(ep, {
+                x: cellX + (cellW - dw) / 2,
+                y: cellY + (cellH - dh) / 2,
+                width: dw, height: dh,
+              });
             }
           }
           out.push({ name: `${baseName(file.name)}_${per}合1.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf') });
@@ -19789,8 +19863,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           cv.height = swap ? src.width : src.height;
           const c = cv.getContext('2d');
           c.translate(cv.width / 2, cv.height / 2);
-          c.rotate(angle * Math.PI / 180);
+          // 先翻转后旋转：canvas 后调用的变换先作用于绘制坐标，
+          // 若先 rotate 再 scale，翻转轴会跟着图片一起转，90°/270° 时水平翻转会变成垂直翻转。
           c.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+          c.rotate(angle * Math.PI / 180);
           c.drawImage(src, -src.width / 2, -src.height / 2);
           const blob = await canvasToBlob(cv, 'image/png');
           out.push({ name: `${baseName(ctx.files[i].name)}_旋转.png`, blob });
@@ -19918,7 +19994,13 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             const w = item.width * scale, h = item.height * scale;
             const left = (idx % cols) * (cellW + gap);
             const top = Math.floor(idx / cols) * (cellH + gap);
+            // cover 时绘制区域大于单元格，必须裁剪，否则会溢到间距和相邻单元格上。
+            c.save();
+            c.beginPath();
+            c.rect(left, top, cellW, cellH);
+            c.clip();
             c.drawImage(item, left + (cellW - w) / 2, top + (cellH - h) / 2, w, h);
+            c.restore();
           });
         } else if (vertical) {
           cv.width = Math.max(...canvases.map(c => c.width));
@@ -20713,7 +20795,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const mm = v => Math.max(1, Math.round(v / 25.4 * dpi));
         const pw = mm(spec.w), ph = mm(spec.h);
         const PW = mm(paper.w), PH = mm(paper.h);
-        const gap = mm(Math.max(0, parseFloat(ctx.get('gap')) || 0));
+        // 间距允许为 0（紧贴排版），不能套用 mm() 的最小 1px 限制。
+        const gap = Math.max(0, Math.round((parseFloat(ctx.get('gap')) || 0) / 25.4 * dpi));
         if (PW * PH > 40000000) throw new Error('纸张尺寸过大，请降低 DPI 或换小纸张');
         const cols = Math.max(1, Math.floor((PW + gap) / (pw + gap)));
         const rows = Math.max(1, Math.floor((PH + gap) / (ph + gap)));
@@ -20721,8 +20804,11 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const wanted = Math.max(0, parseInt(ctx.get('count'), 10) || 0);
         const total = wanted ? Math.min(wanted, capacity) : capacity;
         if (!total) throw new Error('当前规格无法在所选纸张上排版，请降低 DPI 或换大纸张');
-        const gridW = cols * pw + (cols - 1) * gap;
-        const gridH = rows * ph + (rows - 1) * gap;
+        // 张数不满一整行时按实际占用的行列居中，否则照片块会偏半个单元格。
+        const usedCols = Math.min(cols, total);
+        const usedRows = Math.ceil(total / cols);
+        const gridW = usedCols * pw + (usedCols - 1) * gap;
+        const gridH = usedRows * ph + (usedRows - 1) * gap;
         const ox = Math.round((PW - gridW) / 2);
         const oy = Math.round((PH - gridH) / 2);
         const bgMode = ctx.get('bg') || 'keep';
@@ -21194,9 +21280,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             ctx.progress(k, pages.length, `正在添加文字 ${k + 1}/${pages.length}…`);
             const page = doc.getPage(pages[k] - 1);
             const { width, height } = page.getSize();
+            // 选项约定为「下 0 上 100」，而 PDF 原点就在左下，故 y 直接按百分比取值。
             page.drawImage(img, {
               x: width * xPct / 100 - w / 2,
-              y: height * (1 - yPct / 100) - h / 2,
+              y: height * yPct / 100 - h / 2,
               width: w, height: h, opacity,
             });
           }
@@ -21236,9 +21323,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             const { width, height } = page.getSize();
             const w = width * widthPct;
             const h = w * (img.height / img.width);
+            // 选项约定为「下 0 上 100」，而 PDF 原点就在左下，故 y 直接按百分比取值。
             page.drawImage(img, {
               x: width * xPct / 100 - w / 2,
-              y: height * (1 - yPct / 100) - h / 2,
+              y: height * yPct / 100 - h / 2,
               width: w, height: h, opacity,
             });
           }
@@ -21554,9 +21642,11 @@ ${rows}</body></html>`;
         { key: 'prefix', type: 'text', label: '文件名前缀', def: '', placeholder: '如：合同_' },
       ],
       async run(ctx) {
-        const prefix = ctx.get('prefix') || '';
+        const rawPrefix = String(ctx.get('prefix') || '').trim();
+        const prefix = rawPrefix ? sanitizeFileName(rawPrefix) : '';
         const source = ctx.get('source');
         const out = [];
+        const used = new Set();
         for (let i = 0; i < ctx.files.length; i++) {
           const file = ctx.files[i];
           ctx.progress(i, ctx.files.length, `正在命名 ${i + 1}/${ctx.files.length}…`);
@@ -21568,9 +21658,21 @@ ${rows}</body></html>`;
             const lines = await extractPdfLines(file);
             name = (lines.find(l => !/^---/.test(l) && l.trim()) || '').trim();
           }
-          const clean = (name && name.trim()) ? sanitizeFileName(name) : baseName(file.name);
+          // 标题常自带扩展名（如“合同2024.pdf”），先剥掉再拼 .pdf，避免出现 .pdf.pdf。
+          const derived = (name && name.trim())
+            ? String(name).trim().replace(/\.(pdf|docx?|xlsx?|pptx?|txt|rtf|md|jpe?g|png|gif|bmp|tiff?)$/i, '')
+            : baseName(file.name);
+          let stem = sanitizeFileName(prefix + derived);
+          // 多份文档标题相同，或两个文件解析出同一名称时追加序号，避免打包下载互相覆盖。
+          if (used.has(stem.toLowerCase())) {
+            const base = stem;
+            let n = 2;
+            while (used.has(`${base}_${n}`.toLowerCase())) n++;
+            stem = `${base}_${n}`;
+          }
+          used.add(stem.toLowerCase());
           const bytes = await file.arrayBuffer();
-          out.push({ name: `${prefix}${clean}.pdf`, blob: bytesToBlob(bytes, 'application/pdf') });
+          out.push({ name: `${stem}.pdf`, blob: bytesToBlob(bytes, 'application/pdf') });
         }
         return out;
       }
@@ -21608,6 +21710,16 @@ ${rows}</body></html>`;
           out.push({ name: `${baseName(pdfFile.name)}_带附件.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf'), meta: `已嵌入 ${attachFiles.length} 个附件` });
           return out;
         }
+        // 多个 PDF 可能内嵌同名附件（如都叫“报价单.xlsx”），必须带来源并去重，
+        // 否则结果列表打包下载时会互相覆盖、静默丢文件。
+        const usedNames = new Set();
+        const uniqueName = (stem, ext) => {
+          let name = `${stem}${ext}`;
+          let n = 2;
+          while (usedNames.has(name.toLowerCase())) name = `${stem}_${n++}${ext}`;
+          usedNames.add(name.toLowerCase());
+          return name;
+        };
         for (const file of ctx.files) {
           if (!/\.pdf$/i.test(file.name)) continue;
           const doc = await loadPdfDoc(file);
@@ -21617,8 +21729,12 @@ ${rows}</body></html>`;
               out.push({ name: `${baseName(file.name)}_无附件.txt`, blob: new Blob(['该 PDF 无内嵌附件。'], { type: 'text/plain' }) });
             } else {
               for (const att of files) {
+                const rawName = String(att.name || '附件');
+                const dot = rawName.lastIndexOf('.');
+                const ext = dot > 0 ? rawName.slice(dot) : '';
+                const stem = sanitizeFileName(`${baseName(file.name)}_${dot > 0 ? rawName.slice(0, dot) : rawName}`);
                 out.push({
-                  name: `附件_${sanitizeFileName(att.name)}`,
+                  name: uniqueName(stem, ext),
                   blob: bytesToBlob(att.bytes, 'application/octet-stream'),
                   meta: formatBytes(att.bytes.length),
                 });
@@ -21718,7 +21834,8 @@ ${rows}</body></html>`;
           for (const it of items) (byPage[it.page] = byPage[it.page] || []).push(it);
           const sheets = Object.keys(byPage).map(pn => {
             const list = byPage[pn];
-            const rowYs = clusterIdx(list.map(i => i.y), 4);
+            // PDF 坐标原点在左下、y 向上增长；取负号后再聚类，得到自顶向下的行序。
+            const rowYs = clusterIdx(list.map(i => -i.y), 4).map(v => -v);
             const colXs = clusterIdx(list.map(i => i.x), 8);
             const grid = rowYs.map(ry => {
               const rowItems = list.filter(i => Math.abs(i.y - ry) <= 4);
@@ -21791,33 +21908,38 @@ ${rows}</body></html>`;
           ctx.progress(0, 1, `正在转换 ${file.name}…`);
           const sheets = await parseXlsxFile(file);
           const doc = await PDFLib.PDFDocument.create();
-          const PW = 842, PH = 595, colW = 110, rowH = 24, perPage = Math.floor((PH - 70) / rowH);
+          const PW = 842, PH = 595, colW = 110, rowH = 24, MARGIN = 24;
+          const perPage = Math.floor((PH - 70) / rowH);
+          // 列数超出纸张宽度时必须横向分页，否则第 8 列起被画布裁掉、数据静默丢失。
+          const colsPerPage = Math.max(1, Math.floor((PW - MARGIN * 2) / colW));
           for (const sheet of sheets) {
             const cols = sheet.grid.reduce((m, r) => Math.max(m, r.length), 1);
             for (let r0 = 0; r0 < Math.max(1, sheet.grid.length); r0 += perPage) {
-              const { cv, c, scale } = makeOfficeCanvas(PW, PH);
-              c.fillStyle = '#000';
-              c.font = 'bold 22px "Microsoft YaHei", sans-serif';
-              c.fillText(sheet.name, 24 * scale, 36 * scale);
-              for (let ri = 0; ri < perPage && r0 + ri < sheet.grid.length; ri++) {
-                const row = sheet.grid[r0 + ri] || [];
-                const y = 56 + ri * rowH;
-                for (let ci = 0; ci < cols; ci++) {
-                  const x = 24 + ci * colW;
-                  c.strokeStyle = '#999';
-                  c.lineWidth = 1;
-                  c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
-                  const txt = String(row[ci] || '').slice(0, 14);
-                  if (txt) {
-                    c.fillStyle = '#000';
-                    c.font = '20px "Microsoft YaHei", sans-serif';
-                    c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+              for (let c0 = 0; c0 < Math.max(1, cols); c0 += colsPerPage) {
+                const { cv, c, scale } = makeOfficeCanvas(PW, PH);
+                c.fillStyle = '#000';
+                c.font = 'bold 22px "Microsoft YaHei", sans-serif';
+                c.fillText(sheet.name, MARGIN * scale, 36 * scale);
+                for (let ri = 0; ri < perPage && r0 + ri < sheet.grid.length; ri++) {
+                  const row = sheet.grid[r0 + ri] || [];
+                  const y = 56 + ri * rowH;
+                  for (let ci = c0; ci < Math.min(cols, c0 + colsPerPage); ci++) {
+                    const x = MARGIN + (ci - c0) * colW;
+                    c.strokeStyle = '#999';
+                    c.lineWidth = 1;
+                    c.strokeRect(x * scale, y * scale, colW * scale, rowH * scale);
+                    const txt = String(row[ci] || '').slice(0, 14);
+                    if (txt) {
+                      c.fillStyle = '#000';
+                      c.font = '20px "Microsoft YaHei", sans-serif';
+                      c.fillText(txt, (x + 5) * scale, (y + rowH * 0.68) * scale);
+                    }
                   }
                 }
+                const png = await canvasToBlob(cv, 'image/png');
+                const page = doc.addPage([PW, PH]);
+                page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
               }
-              const png = await canvasToBlob(cv, 'image/png');
-              const page = doc.addPage([PW, PH]);
-              page.drawImage(await doc.embedPng(await png.arrayBuffer()), { x: 0, y: 0, width: PW, height: PH });
             }
           }
           out.push({ name: `${baseName(file.name)}.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf') });
@@ -22005,11 +22127,12 @@ ${rows}</body></html>`;
           let x = 0, y = 0;
           for (const cv of canvases) {
             const dw = cv.width * shrink, dh = cv.height * shrink;
+            // 页面尺寸不一致时居中，避免一侧贴边、另一侧留下大片空白。
             if (vertical) {
-              c.drawImage(cv, 0, y, dw, dh);
+              c.drawImage(cv, (big.width - dw) / 2, y, dw, dh);
               y += dh;
             } else {
-              c.drawImage(cv, x, 0, dw, dh);
+              c.drawImage(cv, x, (big.height - dh) / 2, dw, dh);
               x += dw;
             }
           }
@@ -22099,7 +22222,8 @@ ${rows}</body></html>`;
           const parts = [];
           Object.keys(byPage).forEach((pn, idx) => {
             const list = byPage[pn];
-            const rowYs = clusterIdx(list.map(i => i.y), 4);
+            // PDF 坐标原点在左下、y 向上增长；取负号后再聚类，得到自顶向下的行序。
+            const rowYs = clusterIdx(list.map(i => -i.y), 4).map(v => -v);
             const colXs = clusterIdx(list.map(i => i.x), 8);
             if (idx > 0) parts.push('');
             rowYs.forEach(ry => {
@@ -22521,23 +22645,38 @@ ${rows}</body></html>`;
             paras = [];
             const dom = new DOMParser().parseFromString(text, 'text/html');
             const BLOCK_CHILDREN = 'p,div,section,article,header,footer,main,aside,ul,ol,li,table,tr,td,th,blockquote,pre,h1,h2,h3,h4,h5,h6';
+            const inlineBuf = [];
+            const pushPara = text => {
+              const t = (text || '').replace(/\s+/g, ' ').trim();
+              if (t) paras.push({ text: t, size: fontSize });
+            };
+            const flushInline = () => {
+              if (!inlineBuf.length) return;
+              pushPara(inlineBuf.join(' '));
+              inlineBuf.length = 0;
+            };
             const walk = el => {
-              for (const child of Array.from(el.children || [])) {
-                const tag = (child.tagName || '').toLowerCase();
+              for (const node of Array.from(el.childNodes || [])) {
+                // body 直接包裹的裸文本也是正文，不能只遍历元素子节点。
+                if (node.nodeType === 3) { if ((node.nodeValue || '').trim()) inlineBuf.push(node.nodeValue); continue; }
+                if (node.nodeType !== 1) continue;
+                const tag = (node.tagName || '').toLowerCase();
                 if (tag === 'script' || tag === 'style' || tag === 'head') continue;
-                // 只有包含块级子元素时才继续展开；内联子元素（<b>/<span>/<a> 等）
-                // 的文本属于当前段落，必须整段读取，否则 "Hello <b>World</b>" 会丢掉前半句。
-                const hasBlockChild = child.querySelector && child.querySelector(BLOCK_CHILDREN);
-                if (hasBlockChild) { walk(child); continue; }
-                const t = (child.textContent || '').replace(/\s+/g, ' ').trim();
+                const hasBlockChild = node.querySelector && node.querySelector(BLOCK_CHILDREN);
+                if (hasBlockChild) { flushInline(); walk(node); continue; }
+                const t = (node.textContent || '').replace(/\s+/g, ' ').trim();
                 if (!t) continue;
+                // 内联元素（<b>/<span>/<a> 等）要和相邻裸文本拼成同一段落。
+                if (!node.matches || !node.matches(BLOCK_CHILDREN)) { inlineBuf.push(t); continue; }
+                flushInline();
                 const h = tag.match(/^h([1-6])$/);
                 if (h) { paras.push({ text: t, bold: true, size: Math.max(12, 24 - parseInt(h[1], 10) * 2) }); continue; }
                 if (tag === 'li') { paras.push({ text: '• ' + t, size: fontSize }); continue; }
-                paras.push({ text: t, size: fontSize });
+                pushPara(t);
               }
             };
             walk(dom.body || dom.documentElement);
+            flushInline();
             if (!paras.length) paras = [{ text: text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), size: fontSize }];
           } else if (isMd) {
             paras = [];
@@ -25392,17 +25531,14 @@ ${rows}</body></html>`;
       const note = rec.error || (rec.from_qr ? '来自二维码解析' : (rec.from_filename ? '号码来自文件名' : ''));
       const badge = rec.from_cache ? '<span class="bill-cache-badge">缓存</span>' : '';
       const count = (rec.invoices || []).length;
-      const type = count > 1 ? `${rec.invoice_type || ''} 等${count}张` : (rec.invoice_type || '—');
       const number = count > 1 && rec.invoice_number ? `${rec.invoice_number} 等${count}张` : (rec.invoice_number || '—');
       return `<tr data-index="${i}" title="${escapeHtml(note)}">
         <td>${i + 1}</td>
         <td class="bill-ellipsis" title="${escapeHtml(rec.file_name)}">${escapeHtml(rec.file_name)}</td>
         <td class="bill-ellipsis bill-preview" title="${escapeHtml(preview)}">${escapeHtml(preview)}</td>
-        <td>${escapeHtml(type)}</td><td class="bill-mono">${escapeHtml(number)}</td>
+        <td class="bill-mono">${escapeHtml(number)}</td>
         <td>${escapeHtml(rec.invoice_date || '—')}</td>
         <td class="bill-num">${showAmount ? '¥' + billFormatAmount(rec.amount) : '—'}</td>
-        <td class="bill-ellipsis" title="${escapeHtml(rec.buyer || '')}">${escapeHtml(rec.buyer || '—')}</td>
-        <td class="bill-ellipsis" title="${escapeHtml(rec.seller || '')}">${escapeHtml(rec.seller || '—')}</td>
         <td><span class="bill-status ${billStatusInfo(rec.status)}">${escapeHtml(rec.status)}</span>${badge}</td>
         <td class="bill-actions-col"><button class="bill-row-detail-btn" type="button" data-detail="${i}" aria-label="查看第 ${i + 1} 个文件详情">详情</button></td>
       </tr>`;
@@ -25857,7 +25993,10 @@ ${rows}</body></html>`;
     let html = `<div class="bill-detail-meta"><span>状态：<strong>${escapeHtml(rec.status)}</strong></span>
       <span>类型：<strong>${escapeHtml(rec.invoice_type || '-')}</strong></span>
       <span>发票号码：<strong>${escapeHtml(rec.invoice_number || '-')}</strong></span>
+      <span>开票日期：<strong>${escapeHtml(rec.invoice_date || '-')}</strong></span>
       <span>金额：<strong>¥${billFormatAmount(rec.amount)}</strong></span>
+      <span>购买方：<strong>${escapeHtml(rec.buyer || '-')}</strong></span>
+      <span>销售方：<strong>${escapeHtml(rec.seller || '-')}</strong></span>
       <span>页数：<strong>${rec.page_count || '-'}</strong></span></div>`;
     if (rec.error) html += `<p class="bill-result-error">${escapeHtml(rec.error)}</p>`;
     const invoices = rec.invoices || [];

@@ -19,15 +19,23 @@
           for (let i = 0; i < total; i += per) {
             ctx.progress(i, total, `正在拼版 ${Math.min(i + per, total)}/${total}…`);
             const page = doc.addPage([srcSize.width, srcSize.height]);
-            const cellW = (srcSize.width - gap * (cols + 1)) / cols;
-            const cellH = (srcSize.height - gap * (rows + 1)) / rows;
+            const cellW = Math.max(1, (srcSize.width - gap * (cols + 1)) / cols);
+            const cellH = Math.max(1, (srcSize.height - gap * (rows + 1)) / rows);
             for (let k = 0; k < per && i + k < total; k++) {
               const [sp] = await doc.copyPages(src, [i + k]);
               const ep = await doc.embedPage(sp);
               const c = k % cols, r = Math.floor(k / cols);
-              const x = gap + c * (cellW + gap);
-              const y = srcSize.height - gap - (r + 1) * cellH - r * gap;
-              page.drawPage(ep, { x, y, width: cellW, height: cellH });
+              // 2 合 1 的格子是整页宽、半页高；同时传 width/height 会把内容纵向压扁，
+              // 必须按同一比例缩放并在格子内居中。
+              const k2 = Math.min(cellW / ep.width, cellH / ep.height);
+              const dw = ep.width * k2, dh = ep.height * k2;
+              const cellX = gap + c * (cellW + gap);
+              const cellY = srcSize.height - gap - (r + 1) * cellH - r * gap;
+              page.drawPage(ep, {
+                x: cellX + (cellW - dw) / 2,
+                y: cellY + (cellH - dh) / 2,
+                width: dw, height: dh,
+              });
             }
           }
           out.push({ name: `${baseName(file.name)}_${per}合1.pdf`, blob: bytesToBlob(await doc.save(), 'application/pdf') });

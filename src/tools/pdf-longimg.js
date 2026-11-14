@@ -37,11 +37,12 @@
           let x = 0, y = 0;
           for (const cv of canvases) {
             const dw = cv.width * shrink, dh = cv.height * shrink;
+            // 页面尺寸不一致时居中，避免一侧贴边、另一侧留下大片空白。
             if (vertical) {
-              c.drawImage(cv, 0, y, dw, dh);
+              c.drawImage(cv, (big.width - dw) / 2, y, dw, dh);
               y += dh;
             } else {
-              c.drawImage(cv, x, 0, dw, dh);
+              c.drawImage(cv, x, (big.height - dh) / 2, dw, dh);
               x += dw;
             }
           }

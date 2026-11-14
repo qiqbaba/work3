@@ -20,7 +20,8 @@
         const mm = v => Math.max(1, Math.round(v / 25.4 * dpi));
         const pw = mm(spec.w), ph = mm(spec.h);
         const PW = mm(paper.w), PH = mm(paper.h);
-        const gap = mm(Math.max(0, parseFloat(ctx.get('gap')) || 0));
+        // 间距允许为 0（紧贴排版），不能套用 mm() 的最小 1px 限制。
+        const gap = Math.max(0, Math.round((parseFloat(ctx.get('gap')) || 0) / 25.4 * dpi));
         if (PW * PH > 40000000) throw new Error('纸张尺寸过大，请降低 DPI 或换小纸张');
         const cols = Math.max(1, Math.floor((PW + gap) / (pw + gap)));
         const rows = Math.max(1, Math.floor((PH + gap) / (ph + gap)));
@@ -28,8 +29,11 @@
         const wanted = Math.max(0, parseInt(ctx.get('count'), 10) || 0);
         const total = wanted ? Math.min(wanted, capacity) : capacity;
         if (!total) throw new Error('当前规格无法在所选纸张上排版，请降低 DPI 或换大纸张');
-        const gridW = cols * pw + (cols - 1) * gap;
-        const gridH = rows * ph + (rows - 1) * gap;
+        // 张数不满一整行时按实际占用的行列居中，否则照片块会偏半个单元格。
+        const usedCols = Math.min(cols, total);
+        const usedRows = Math.ceil(total / cols);
+        const gridW = usedCols * pw + (usedCols - 1) * gap;
+        const gridH = usedRows * ph + (usedRows - 1) * gap;
         const ox = Math.round((PW - gridW) / 2);
         const oy = Math.round((PH - gridH) / 2);
         const bgMode = ctx.get('bg') || 'keep';

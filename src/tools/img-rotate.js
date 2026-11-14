@@ -20,8 +20,10 @@
           cv.height = swap ? src.width : src.height;
           const c = cv.getContext('2d');
           c.translate(cv.width / 2, cv.height / 2);
-          c.rotate(angle * Math.PI / 180);
+          // 先翻转后旋转：canvas 后调用的变换先作用于绘制坐标，
+          // 若先 rotate 再 scale，翻转轴会跟着图片一起转，90°/270° 时水平翻转会变成垂直翻转。
           c.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+          c.rotate(angle * Math.PI / 180);
           c.drawImage(src, -src.width / 2, -src.height / 2);
           const blob = await canvasToBlob(cv, 'image/png');
           out.push({ name: `${baseName(ctx.files[i].name)}_旋转.png`, blob });

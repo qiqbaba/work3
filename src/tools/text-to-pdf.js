@@ -39,23 +39,38 @@
             paras = [];
             const dom = new DOMParser().parseFromString(text, 'text/html');
             const BLOCK_CHILDREN = 'p,div,section,article,header,footer,main,aside,ul,ol,li,table,tr,td,th,blockquote,pre,h1,h2,h3,h4,h5,h6';
+            const inlineBuf = [];
+            const pushPara = text => {
+              const t = (text || '').replace(/\s+/g, ' ').trim();
+              if (t) paras.push({ text: t, size: fontSize });
+            };
+            const flushInline = () => {
+              if (!inlineBuf.length) return;
+              pushPara(inlineBuf.join(' '));
+              inlineBuf.length = 0;
+            };
             const walk = el => {
-              for (const child of Array.from(el.children || [])) {
-                const tag = (child.tagName || '').toLowerCase();
+              for (const node of Array.from(el.childNodes || [])) {
+                // body 直接包裹的裸文本也是正文，不能只遍历元素子节点。
+                if (node.nodeType === 3) { if ((node.nodeValue || '').trim()) inlineBuf.push(node.nodeValue); continue; }
+                if (node.nodeType !== 1) continue;
+                const tag = (node.tagName || '').toLowerCase();
                 if (tag === 'script' || tag === 'style' || tag === 'head') continue;
-                // 只有包含块级子元素时才继续展开；内联子元素（<b>/<span>/<a> 等）
-                // 的文本属于当前段落，必须整段读取，否则 "Hello <b>World</b>" 会丢掉前半句。
-                const hasBlockChild = child.querySelector && child.querySelector(BLOCK_CHILDREN);
-                if (hasBlockChild) { walk(child); continue; }
-                const t = (child.textContent || '').replace(/\s+/g, ' ').trim();
+                const hasBlockChild = node.querySelector && node.querySelector(BLOCK_CHILDREN);
+                if (hasBlockChild) { flushInline(); walk(node); continue; }
+                const t = (node.textContent || '').replace(/\s+/g, ' ').trim();
                 if (!t) continue;
+                // 内联元素（<b>/<span>/<a> 等）要和相邻裸文本拼成同一段落。
+                if (!node.matches || !node.matches(BLOCK_CHILDREN)) { inlineBuf.push(t); continue; }
+                flushInline();
                 const h = tag.match(/^h([1-6])$/);
                 if (h) { paras.push({ text: t, bold: true, size: Math.max(12, 24 - parseInt(h[1], 10) * 2) }); continue; }
                 if (tag === 'li') { paras.push({ text: '• ' + t, size: fontSize }); continue; }
-                paras.push({ text: t, size: fontSize });
+                pushPara(t);
               }
             };
             walk(dom.body || dom.documentElement);
+            flushInline();
             if (!paras.length) paras = [{ text: text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), size: fontSize }];
           } else if (isMd) {
             paras = [];

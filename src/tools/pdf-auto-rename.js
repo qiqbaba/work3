@@ -7,9 +7,11 @@
         { key: 'prefix', type: 'text', label: '文件名前缀', def: '', placeholder: '如：合同_' },
       ],
       async run(ctx) {
-        const prefix = ctx.get('prefix') || '';
+        const rawPrefix = String(ctx.get('prefix') || '').trim();
+        const prefix = rawPrefix ? sanitizeFileName(rawPrefix) : '';
         const source = ctx.get('source');
         const out = [];
+        const used = new Set();
         for (let i = 0; i < ctx.files.length; i++) {
           const file = ctx.files[i];
           ctx.progress(i, ctx.files.length, `正在命名 ${i + 1}/${ctx.files.length}…`);
@@ -21,9 +23,21 @@
             const lines = await extractPdfLines(file);
             name = (lines.find(l => !/^---/.test(l) && l.trim()) || '').trim();
           }
-          const clean = (name && name.trim()) ? sanitizeFileName(name) : baseName(file.name);
+          // 标题常自带扩展名（如“合同2024.pdf”），先剥掉再拼 .pdf，避免出现 .pdf.pdf。
+          const derived = (name && name.trim())
+            ? String(name).trim().replace(/\.(pdf|docx?|xlsx?|pptx?|txt|rtf|md|jpe?g|png|gif|bmp|tiff?)$/i, '')
+            : baseName(file.name);
+          let stem = sanitizeFileName(prefix + derived);
+          // 多份文档标题相同，或两个文件解析出同一名称时追加序号，避免打包下载互相覆盖。
+          if (used.has(stem.toLowerCase())) {
+            const base = stem;
+            let n = 2;
+            while (used.has(`${base}_${n}`.toLowerCase())) n++;
+            stem = `${base}_${n}`;
+          }
+          used.add(stem.toLowerCase());
           const bytes = await file.arrayBuffer();
-          out.push({ name: `${prefix}${clean}.pdf`, blob: bytesToBlob(bytes, 'application/pdf') });
+          out.push({ name: `${stem}.pdf`, blob: bytesToBlob(bytes, 'application/pdf') });
         }
         return out;
       }

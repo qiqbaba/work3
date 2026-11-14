@@ -38,7 +38,13 @@
             const w = item.width * scale, h = item.height * scale;
             const left = (idx % cols) * (cellW + gap);
             const top = Math.floor(idx / cols) * (cellH + gap);
+            // cover 时绘制区域大于单元格，必须裁剪，否则会溢到间距和相邻单元格上。
+            c.save();
+            c.beginPath();
+            c.rect(left, top, cellW, cellH);
+            c.clip();
             c.drawImage(item, left + (cellW - w) / 2, top + (cellH - h) / 2, w, h);
+            c.restore();
           });
         } else if (vertical) {
           cv.width = Math.max(...canvases.map(c => c.width));

@@ -12,7 +12,8 @@
           for (const it of items) (byPage[it.page] = byPage[it.page] || []).push(it);
           const sheets = Object.keys(byPage).map(pn => {
             const list = byPage[pn];
-            const rowYs = clusterIdx(list.map(i => i.y), 4);
+            // PDF 坐标原点在左下、y 向上增长；取负号后再聚类，得到自顶向下的行序。
+            const rowYs = clusterIdx(list.map(i => -i.y), 4).map(v => -v);
             const colXs = clusterIdx(list.map(i => i.x), 8);
             const grid = rowYs.map(ry => {
               const rowItems = list.filter(i => Math.abs(i.y - ry) <= 4);
